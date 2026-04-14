@@ -1,0 +1,17 @@
+# Core numerical and analysis tools
+numpy
+scipy
+pandas
+matplotlib
+
+# Audio and feature extraction
+librosa
+soundfile
+
+# Notebook workflow
+jupyter
+ipykernel
+
+# Testing and utility
+pytest
+tqdm
