@@ -1,2 +1,2 @@
-wav_22050_mono/
-annotations_beat/
+# Placeholder to keep this directory tracked.
+# Exceptions for retained raw data live in the repo root .gitignore.

@@ -21,6 +21,10 @@ outputs/logs/*
 
 # Keep scaffold directories in git
 !data/raw/.gitkeep
+!data/raw/annotations_beat/
+!data/raw/annotations_beat/**
+!data/raw/wav_22050_mono/
+!data/raw/wav_22050_mono/**
 !data/interim/.gitkeep
 !data/processed/.gitkeep
 !outputs/figures/.gitkeep
