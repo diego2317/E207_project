@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import itertools
+from collections import defaultdict
 from pathlib import Path
 from typing import Iterable
 
@@ -15,7 +16,7 @@ from scripts.models import Recording, RecordingPair
 
 
 AUDIO_SUFFIXES = {".wav", ".flac", ".mp3", ".ogg", ".m4a", ".aiff", ".aif"}
-BEAT_SUFFIXES = {".txt", ".csv", ".tsv"}
+BEAT_SUFFIXES = {".txt", ".csv", ".tsv", ".beat"}
 MANIFEST_FILENAMES = ("mazurka_manifest.csv", "manifest.csv")
 MANIFEST_COLUMNS = {"piece", "recording_id", "audio_path", "beats_path"}
 
@@ -27,6 +28,8 @@ def discover_recordings(dataset_root: Path | str | None = None) -> list[Recordin
     manifest_path = _find_manifest(root)
     if manifest_path is not None:
         return _discover_from_manifest(manifest_path)
+    if _has_split_mazurka_layout(root):
+        return _discover_from_split_layout(root)
     return _discover_from_directory(root)
 
 
@@ -34,7 +37,7 @@ def build_recording_pairs(
     recordings: Iterable[Recording],
     require_annotations: bool = True,
 ) -> list[RecordingPair]:
-    """Build all within-piece recording pairs for evaluation."""
+    """Build all directed within-piece recording pairs for evaluation."""
 
     grouped: dict[str, list[Recording]] = {}
     for recording in recordings:
@@ -45,7 +48,7 @@ def build_recording_pairs(
     pairs: list[RecordingPair] = []
     for piece, piece_recordings in grouped.items():
         ordered = sorted(piece_recordings, key=lambda item: item.recording_id)
-        for reference, query in itertools.combinations(ordered, 2):
+        for reference, query in itertools.permutations(ordered, 2):
             pairs.append(RecordingPair(piece=piece, reference=reference, query=query))
     return pairs
 
@@ -76,9 +79,9 @@ def load_beat_timestamps(beats_path: Path | str) -> np.ndarray:
     if not path.exists():
         raise FileNotFoundError(f"Beat annotation file does not exist: {path}")
 
-    delimiter = "\t" if path.suffix.lower() == ".tsv" else ","
+    delimiter, comments = _beat_file_parse_options(path)
     try:
-        data = np.genfromtxt(path, delimiter=delimiter, dtype=float)
+        data = np.genfromtxt(path, delimiter=delimiter, dtype=float, comments=comments)
     except ValueError as exc:
         raise ValueError(f"Could not parse beat timestamps from {path}") from exc
 
@@ -89,10 +92,10 @@ def load_beat_timestamps(beats_path: Path | str) -> np.ndarray:
         data = np.array([float(data)], dtype=np.float64)
     elif data.ndim == 1:
         if np.isnan(data[0]):
-            data = _load_numeric_column_with_header(path, delimiter)
+            data = _load_numeric_column_with_header(path, delimiter, comments)
     else:
         if np.isnan(data).all():
-            data = _load_numeric_column_with_header(path, delimiter)
+            data = _load_numeric_column_with_header(path, delimiter, comments)
         else:
             data = data[:, 0]
 
@@ -144,6 +147,39 @@ def _discover_from_manifest(manifest_path: Path) -> list[Recording]:
     return recordings
 
 
+def _has_split_mazurka_layout(root: Path) -> bool:
+    return (root / "wav_22050_mono").is_dir() and (root / "annotations_beat").is_dir()
+
+
+def _discover_from_split_layout(root: Path) -> list[Recording]:
+    audio_root = root / "wav_22050_mono"
+    beats_root = root / "annotations_beat"
+    beat_index = _index_beat_files(beats_root)
+
+    recordings: list[Recording] = []
+    audio_files = sorted(
+        path for path in audio_root.rglob("*") if path.is_file() and path.suffix.lower() in AUDIO_SUFFIXES
+    )
+    for audio_path in audio_files:
+        piece = audio_path.parent.name
+        recording_id = audio_path.stem
+        beats_path = _match_split_layout_beats(
+            piece=piece,
+            recording_id=recording_id,
+            beats_root=beats_root,
+            beat_index=beat_index,
+        )
+        recordings.append(
+            Recording(
+                piece=piece,
+                recording_id=recording_id,
+                audio_path=audio_path,
+                beats_path=beats_path,
+            )
+        )
+    return recordings
+
+
 def _discover_from_directory(root: Path) -> list[Recording]:
     recordings: list[Recording] = []
     audio_files = sorted(
@@ -187,8 +223,42 @@ def _match_beats_file(audio_path: Path, beat_files: list[Path]) -> Path | None:
     return piece_candidates[0] if piece_candidates else None
 
 
-def _load_numeric_column_with_header(path: Path, delimiter: str) -> np.ndarray:
-    raw_rows = np.genfromtxt(path, delimiter=delimiter, dtype=str)
+def _index_beat_files(beats_root: Path) -> dict[str, list[Path]]:
+    indexed_paths: dict[str, list[Path]] = defaultdict(list)
+    for beat_path in sorted(beats_root.rglob("*")):
+        if beat_path.is_file() and beat_path.suffix.lower() in BEAT_SUFFIXES:
+            indexed_paths[beat_path.stem].append(beat_path)
+    return indexed_paths
+
+
+def _match_split_layout_beats(
+    piece: str,
+    recording_id: str,
+    beats_root: Path,
+    beat_index: dict[str, list[Path]],
+) -> Path | None:
+    piece_dir = beats_root / piece
+    for suffix in sorted(BEAT_SUFFIXES):
+        candidate = piece_dir / f"{recording_id}{suffix}"
+        if candidate.exists():
+            return candidate
+
+    stem_matches = beat_index.get(recording_id, [])
+    if not stem_matches:
+        return None
+
+    piece_matches = [path for path in stem_matches if piece in path.parts]
+    if piece_matches:
+        return piece_matches[0]
+    return stem_matches[0]
+
+
+def _load_numeric_column_with_header(
+    path: Path,
+    delimiter: str | None,
+    comments: str | None,
+) -> np.ndarray:
+    raw_rows = np.genfromtxt(path, delimiter=delimiter, dtype=str, comments=comments)
     if raw_rows.ndim == 1:
         raw_rows = raw_rows.reshape(-1, 1)
 
@@ -201,6 +271,15 @@ def _load_numeric_column_with_header(path: Path, delimiter: str) -> np.ndarray:
         if numeric.size > 0:
             return numeric
     raise ValueError(f"Could not find a numeric timestamp column in {path}")
+
+
+def _beat_file_parse_options(path: Path) -> tuple[str | None, str | None]:
+    suffix = path.suffix.lower()
+    if suffix == ".tsv":
+        return "\t", None
+    if suffix == ".beat":
+        return None, "%"
+    return ",", None
 
 
 def _resolve_path(base_dir: Path, raw_path: str) -> Path:

@@ -13,6 +13,7 @@ MODULES = [
     "scripts.online_baselines",
     "scripts.kalman_online",
     "scripts.evaluation",
+    "scripts.run_benchmark",
     "scripts.visualization",
     "scripts.utils",
 ]

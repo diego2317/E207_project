@@ -32,13 +32,32 @@ def estimate_query_times(
     )
 
 
+def estimate_reference_times(
+    alignment_result: AlignmentResult,
+    query_times: np.ndarray,
+) -> np.ndarray:
+    """Interpolate reference timestamps for arbitrary query timestamps."""
+
+    query_path, reference_path = _collapse_duplicates(
+        alignment_result.query_times,
+        alignment_result.reference_times,
+    )
+    return np.interp(
+        np.asarray(query_times, dtype=np.float64),
+        query_path,
+        reference_path,
+        left=reference_path[0],
+        right=reference_path[-1],
+    )
+
+
 def compute_alignment_metrics(
     alignment_result: AlignmentResult,
     reference_beats: np.ndarray,
     query_beats: np.ndarray,
     tolerances: Iterable[float] = DEFAULT_TOLERANCES,
 ) -> dict[str, float | int | str]:
-    """Compare an estimated alignment against beat-based correspondence."""
+    """Compare an estimated query-to-reference alignment against beat correspondence."""
 
     reference_beats = np.asarray(reference_beats, dtype=np.float64)
     query_beats = np.asarray(query_beats, dtype=np.float64)
@@ -46,10 +65,10 @@ def compute_alignment_metrics(
     if num_beats == 0:
         raise ValueError("Both recordings must contain at least one beat timestamp.")
 
-    reference_eval = reference_beats[:num_beats]
     query_eval = query_beats[:num_beats]
-    estimated_query = estimate_query_times(alignment_result, reference_eval)
-    errors = estimated_query - query_eval
+    reference_eval = reference_beats[:num_beats]
+    estimated_reference = estimate_reference_times(alignment_result, query_eval)
+    errors = estimated_reference - reference_eval
     abs_errors = np.abs(errors)
 
     metrics: dict[str, float | int | str] = {

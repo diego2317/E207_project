@@ -22,7 +22,7 @@ class Recording:
 
 @dataclass(slots=True)
 class RecordingPair:
-    """Pair of performances from the same piece to align."""
+    """Directed benchmark case between two performances of the same piece."""
 
     piece: str
     reference: Recording
