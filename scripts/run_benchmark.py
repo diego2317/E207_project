@@ -1,4 +1,4 @@
-"""Command-line entry point for offline benchmark runs."""
+"""Command-line entry point for alignment benchmark runs."""
 
 from __future__ import annotations
 
@@ -11,6 +11,12 @@ from scripts.config import DEFAULT_SAMPLE_RATE, METRICS_DIR, RAW_DATA_DIR
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--method",
+        choices=evaluation.list_alignment_methods(),
+        default=evaluation.DEFAULT_METHOD_NAME,
+        help="Alignment method to benchmark.",
+    )
     parser.add_argument(
         "--mode",
         choices=("single", "small", "full"),
@@ -43,12 +49,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--experiment-name",
         default=None,
-        help="Output filename prefix. Defaults to a mode-specific offline DTW name.",
+        help="Output filename prefix. Defaults to a method- and mode-specific name.",
     )
     parser.add_argument(
         "--feature-name",
         default="chroma_stft",
-        help="Feature representation passed to the offline benchmark pipeline.",
+        help="Feature representation passed to the benchmark pipeline.",
     )
     parser.add_argument(
         "--sample-rate",
@@ -74,11 +80,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     experiment_name = args.experiment_name or _default_experiment_name(
+        method_name=args.method,
         mode=args.mode,
         pair_id=args.pair_id,
     )
-    metrics_frame = evaluation.run_offline_benchmark(
+    metrics_frame = evaluation.run_alignment_benchmark(
         dataset_root=args.dataset_root,
+        method_name=args.method,
         sample_rate=args.sample_rate,
         feature_name=args.feature_name,
         output_dir=args.output_dir,
@@ -90,20 +98,20 @@ def main(argv: list[str] | None = None) -> int:
         show_progress=args.show_progress,
     )
     print(
-        f"Completed {args.mode} benchmark run with {len(metrics_frame)} benchmark case(s). "
-        f"Experiment: {experiment_name}"
+        f"Completed {args.method} {args.mode} benchmark run with {len(metrics_frame)} "
+        f"benchmark case(s). Experiment: {experiment_name}"
     )
     return 0
 
 
-def _default_experiment_name(mode: str, pair_id: str | None) -> str:
+def _default_experiment_name(method_name: str, mode: str, pair_id: str | None) -> str:
     if mode == "single" and pair_id:
-        return f"offline_dtw_single_{pair_id}"
+        return f"{method_name}_single_{pair_id}"
     if mode == "small":
-        return "offline_dtw_small"
+        return f"{method_name}_small"
     if mode == "full":
-        return "offline_dtw_full"
-    return "offline_dtw_benchmark"
+        return f"{method_name}_full"
+    return f"{method_name}_benchmark"
 
 
 if __name__ == "__main__":

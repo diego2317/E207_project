@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 from typing import Literal
 
 import pandas as pd
 import soundfile as sf
 from tqdm.auto import tqdm
 
-from scripts import data_io, features, metrics, offline_dtw
+from scripts import data_io, features, metrics, offline_dtw, online_baselines
 from scripts.config import DEFAULT_SAMPLE_RATE, METRICS_DIR
 from scripts.models import AlignmentResult, Recording, RecordingPair
 
@@ -18,11 +18,52 @@ from scripts.models import AlignmentResult, Recording, RecordingPair
 AlignmentRunner = Callable[..., AlignmentResult]
 BenchmarkSelectionMode = Literal["single", "small", "full"]
 SMALL_BENCHMARK_RECORDING_COUNT = 3
+DEFAULT_METHOD_NAME = "offline_dtw"
+_ALIGNMENT_RUNNERS: dict[str, AlignmentRunner] = {
+    DEFAULT_METHOD_NAME: offline_dtw.run_offline_dtw,
+    "oltw": online_baselines.run_oltw,
+    "oltw_global": online_baselines.run_oltw_global,
+}
+
+
+def register_alignment_runner(method_name: str, runner: AlignmentRunner) -> None:
+    """Register a benchmark method under a stable method name."""
+
+    normalized_name = method_name.strip().lower()
+    if not normalized_name:
+        raise ValueError("method_name must not be empty.")
+    _ALIGNMENT_RUNNERS[normalized_name] = runner
+
+
+def unregister_alignment_runner(method_name: str) -> None:
+    """Remove a previously registered benchmark method."""
+
+    _ALIGNMENT_RUNNERS.pop(method_name.strip().lower(), None)
+
+
+def list_alignment_methods() -> tuple[str, ...]:
+    """Return the registered benchmark method names in sorted order."""
+
+    return tuple(sorted(_ALIGNMENT_RUNNERS))
+
+
+def get_alignment_runner(method_name: str = DEFAULT_METHOD_NAME) -> AlignmentRunner:
+    """Return the alignment runner registered for a benchmark method."""
+
+    normalized_name = method_name.strip().lower()
+    try:
+        return _ALIGNMENT_RUNNERS[normalized_name]
+    except KeyError as error:
+        supported_methods = ", ".join(list_alignment_methods())
+        raise ValueError(
+            f"Unsupported method_name={method_name!r}. Supported methods: {supported_methods}."
+        ) from error
 
 
 def evaluate_recording_pair(
     pair: RecordingPair,
-    runner: AlignmentRunner = offline_dtw.run_offline_dtw,
+    method_name: str = DEFAULT_METHOD_NAME,
+    runner: AlignmentRunner | None = None,
     sample_rate: int = DEFAULT_SAMPLE_RATE,
     feature_name: str = "chroma_stft",
 ) -> tuple[AlignmentResult, dict[str, object]]:
@@ -46,7 +87,8 @@ def evaluate_recording_pair(
     )
     query_features.metadata["recording_id"] = pair.query.recording_id
 
-    alignment_result = runner(reference_features, query_features)
+    selected_runner = runner or get_alignment_runner(method_name)
+    alignment_result = selected_runner(reference_features, query_features)
     reference_beats = data_io.load_beat_timestamps(pair.reference.beats_path)
     query_beats = data_io.load_beat_timestamps(pair.query.beats_path)
     metric_row = metrics.compute_alignment_metrics(
@@ -66,11 +108,12 @@ def evaluate_recording_pair(
 
 def benchmark_recording_pairs(
     pairs: list[RecordingPair],
-    runner: AlignmentRunner = offline_dtw.run_offline_dtw,
+    method_name: str = DEFAULT_METHOD_NAME,
+    runner: AlignmentRunner | None = None,
     sample_rate: int = DEFAULT_SAMPLE_RATE,
     feature_name: str = "chroma_stft",
     output_dir: Path | str = METRICS_DIR,
-    experiment_name: str = "offline_dtw_benchmark",
+    experiment_name: str = "alignment_benchmark",
     save_outputs: bool = True,
     show_progress: bool = False,
 ) -> pd.DataFrame:
@@ -84,6 +127,7 @@ def benchmark_recording_pairs(
     for pair in iterator:
         _, metric_row = evaluate_recording_pair(
             pair,
+            method_name=method_name,
             runner=runner,
             sample_rate=sample_rate,
             feature_name=feature_name,
@@ -129,6 +173,43 @@ def select_preview_recording_pair(pairs: list[RecordingPair]) -> RecordingPair:
     return min(small_pairs, key=_pair_duration_key)
 
 
+def run_alignment_benchmark(
+    dataset_root: Path | str | None = None,
+    method_name: str = DEFAULT_METHOD_NAME,
+    runner: AlignmentRunner | None = None,
+    sample_rate: int = DEFAULT_SAMPLE_RATE,
+    feature_name: str = "chroma_stft",
+    output_dir: Path | str = METRICS_DIR,
+    experiment_name: str = "alignment_benchmark",
+    selection_mode: BenchmarkSelectionMode = "full",
+    pair_id: str | None = None,
+    subset_size: int = 10,
+    save_outputs: bool = True,
+    show_progress: bool = False,
+) -> pd.DataFrame:
+    """Discover data, select benchmark cases, and run one alignment benchmark."""
+
+    recordings = data_io.discover_recordings(dataset_root)
+    pairs = data_io.build_recording_pairs(recordings)
+    selected_pairs = select_recording_pairs(
+        pairs,
+        selection_mode=selection_mode,
+        pair_id=pair_id,
+        subset_size=subset_size,
+    )
+    return benchmark_recording_pairs(
+        selected_pairs,
+        method_name=method_name,
+        runner=runner,
+        sample_rate=sample_rate,
+        feature_name=feature_name,
+        output_dir=output_dir,
+        experiment_name=experiment_name,
+        save_outputs=save_outputs,
+        show_progress=show_progress,
+    )
+
+
 def run_offline_benchmark(
     dataset_root: Path | str | None = None,
     sample_rate: int = DEFAULT_SAMPLE_RATE,
@@ -141,22 +222,18 @@ def run_offline_benchmark(
     save_outputs: bool = True,
     show_progress: bool = False,
 ) -> pd.DataFrame:
-    """Discover data, select benchmark cases, and run the offline DTW benchmark."""
+    """Compatibility wrapper for running the offline DTW benchmark."""
 
-    recordings = data_io.discover_recordings(dataset_root)
-    pairs = data_io.build_recording_pairs(recordings)
-    selected_pairs = select_recording_pairs(
-        pairs,
-        selection_mode=selection_mode,
-        pair_id=pair_id,
-        subset_size=subset_size,
-    )
-    return benchmark_recording_pairs(
-        selected_pairs,
+    return run_alignment_benchmark(
+        dataset_root=dataset_root,
+        method_name=DEFAULT_METHOD_NAME,
         sample_rate=sample_rate,
         feature_name=feature_name,
         output_dir=output_dir,
         experiment_name=experiment_name,
+        selection_mode=selection_mode,
+        pair_id=pair_id,
+        subset_size=subset_size,
         save_outputs=save_outputs,
         show_progress=show_progress,
     )

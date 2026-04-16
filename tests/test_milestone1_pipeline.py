@@ -10,7 +10,16 @@ import pandas as pd
 import pytest
 import soundfile as sf
 
-from scripts import data_io, evaluation, features, metrics, offline_dtw, run_benchmark, visualization
+from scripts import (
+    data_io,
+    evaluation,
+    features,
+    metrics,
+    offline_dtw,
+    online_baselines,
+    run_benchmark,
+    visualization,
+)
 from scripts.models import AlignmentResult, FeatureSequence
 
 
@@ -145,6 +154,71 @@ def test_end_to_end_offline_benchmark_writes_outputs(tmp_path: Path) -> None:
     assert (output_dir / "synthetic_benchmark_summary.csv").exists()
 
 
+def test_run_alignment_benchmark_supports_registered_method(tmp_path: Path) -> None:
+    dataset_root = _build_synthetic_dataset(tmp_path)
+
+    def fake_online_runner(
+        reference_features: FeatureSequence,
+        query_features: FeatureSequence,
+    ) -> AlignmentResult:
+        length = min(len(reference_features.frame_times), len(query_features.frame_times))
+        indices = np.arange(length, dtype=np.int64)
+        return AlignmentResult(
+            method_name="toy_online",
+            reference_id=reference_features.metadata["recording_id"],
+            query_id=query_features.metadata["recording_id"],
+            reference_times=reference_features.frame_times[:length],
+            query_times=query_features.frame_times[:length],
+            path=np.column_stack([indices, indices]),
+            metadata={"backend": "synthetic"},
+        )
+
+    evaluation.register_alignment_runner("toy_online", fake_online_runner)
+    try:
+        metrics_frame = evaluation.run_alignment_benchmark(
+            dataset_root=dataset_root,
+            method_name="toy_online",
+            save_outputs=False,
+            show_progress=False,
+        )
+    finally:
+        evaluation.unregister_alignment_runner("toy_online")
+
+    assert len(metrics_frame) == 2
+    assert set(metrics_frame["method_name"]) == {"toy_online"}
+    assert set(metrics_frame["pair_id"]) == {
+        "performance_a__performance_b",
+        "performance_b__performance_a",
+    }
+
+
+def test_get_alignment_runner_rejects_unknown_method() -> None:
+    with pytest.raises(ValueError, match="Unsupported method_name"):
+        evaluation.get_alignment_runner("not_a_method")
+
+
+def test_online_baseline_adapter_requires_registration() -> None:
+    online_baselines.unregister_online_baseline("oltw")
+
+    reference = FeatureSequence(
+        values=np.array([[0.0], [1.0]], dtype=np.float64),
+        frame_times=np.array([0.0, 0.5], dtype=np.float64),
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+    )
+    query = FeatureSequence(
+        values=np.array([[0.0], [1.0]], dtype=np.float64),
+        frame_times=np.array([0.0, 0.5], dtype=np.float64),
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+    )
+
+    with pytest.raises(NotImplementedError, match="Register one via"):
+        online_baselines.run_oltw(reference, query)
+
+
 def test_select_recording_pairs_supports_single_small_and_full(tmp_path: Path) -> None:
     dataset_root = _build_split_layout_dataset(
         tmp_path,
@@ -236,14 +310,20 @@ def test_run_benchmark_cli_passes_selection_arguments(
 ) -> None:
     captured: dict[str, object] = {}
 
-    def fake_run_offline_benchmark(**kwargs: object) -> pd.DataFrame:
+    def fake_run_alignment_benchmark(**kwargs: object) -> pd.DataFrame:
         captured.update(kwargs)
         return pd.DataFrame([{"pair_id": "demo_pair"}])
 
-    monkeypatch.setattr(run_benchmark.evaluation, "run_offline_benchmark", fake_run_offline_benchmark)
+    monkeypatch.setattr(
+        run_benchmark.evaluation,
+        "run_alignment_benchmark",
+        fake_run_alignment_benchmark,
+    )
 
     exit_code = run_benchmark.main(
         [
+            "--method",
+            "offline_dtw",
             "--mode",
             "small",
             "--dataset-root",
@@ -257,10 +337,14 @@ def test_run_benchmark_cli_passes_selection_arguments(
     )
 
     assert exit_code == 0
+    assert captured["method_name"] == "offline_dtw"
     assert captured["selection_mode"] == "small"
     assert captured["subset_size"] == 10
     assert captured["save_outputs"] is False
-    assert "Completed small benchmark run with 1 benchmark case(s)." in capsys.readouterr().out
+    assert (
+        "Completed offline_dtw small benchmark run with 1 benchmark case(s)."
+        in capsys.readouterr().out
+    )
 
 
 def test_visualization_helpers_render(tmp_path: Path) -> None:

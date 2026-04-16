@@ -4,8 +4,8 @@ Milestone 1 implementation for the Real-Time Alignment & Tracking project.
 
 ## Layout
 
-- `scripts/`: reusable modules for benchmark discovery, feature extraction, offline DTW, evaluation, and plotting
-- `notebooks/`: exploratory notebook for running the offline benchmark pipeline
+- `scripts/`: reusable modules for benchmark discovery, feature extraction, offline/online baseline adapters, evaluation, and plotting
+- `notebooks/`: exploratory notebook for running the alignment benchmark pipeline
 - `data/`: local benchmark assets and derived datasets
 - `outputs/`: figures, metrics, and logs produced during experiments
 - `tests/`: smoke and pipeline tests for the Milestone 1 workflow
@@ -42,11 +42,13 @@ mazurka_op24_no2,performance_b,mazurka_op24_no2/performance_b/audio.wav,mazurka_
 4. Run `pytest` to verify the pipeline.
 5. Use `notebooks/01_alignment_sandbox.ipynb` for exploratory testing.
 
-## Offline Benchmark Entry Points
+## Benchmark Entry Points
 
-- `scripts.evaluation.evaluate_recording_pair(pair)` runs one offline-DTW alignment and computes beat-based query-to-reference tracking metrics.
-- `scripts.evaluation.run_offline_benchmark(...)` discovers recordings, builds directed same-piece benchmark cases, selects a run mode, and writes metrics summaries to `outputs/metrics/`.
-- `python -m scripts.run_benchmark --mode single --pair-id <reference__query>` runs one directed benchmark case.
-- `python -m scripts.run_benchmark --mode small` runs the fixed 3-recording preview benchmark (6 directed cases from the shortest eligible piece).
-- `python -m scripts.run_benchmark --mode full` runs the full directed benchmark set.
+- `scripts.evaluation.evaluate_recording_pair(pair, method_name=...)` runs one alignment method on one benchmark case and computes beat-based query-to-reference tracking metrics.
+- `scripts.evaluation.run_alignment_benchmark(...)` discovers recordings, builds directed same-piece benchmark cases, selects a run mode, and writes metrics summaries to `outputs/metrics/`.
+- `scripts.evaluation.run_offline_benchmark(...)` remains as a compatibility wrapper for the offline DTW baseline.
+- `python -m scripts.run_benchmark --method offline_dtw --mode single --pair-id <reference__query>` runs one directed benchmark case.
+- `python -m scripts.run_benchmark --method offline_dtw --mode small` runs the fixed 3-recording preview benchmark (6 directed cases from the shortest eligible piece).
+- `python -m scripts.run_benchmark --method offline_dtw --mode full` runs the full directed benchmark set.
+- `scripts.online_baselines.register_online_baseline("oltw", runner)` and `register_online_baseline("oltw_global", runner)` plug external online baseline implementations into the same benchmark harness.
 - `scripts.visualization.plot_alignment_path(...)` and `scripts.visualization.plot_error_summary(...)` generate diagnostic plots for inspection.
