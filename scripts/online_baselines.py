@@ -55,18 +55,30 @@ def run_oltw(
     reference_features: FeatureSequence,
     query_features: FeatureSequence,
 ) -> AlignmentResult:
-    """Run an OLTW baseline through a registered adapter."""
+    """Run OLTW, preferring a registered override but defaulting to the in-repo runner."""
 
-    return _run_registered_baseline("oltw", reference_features, query_features)
+    runner = _REGISTERED_BASELINES.get("oltw")
+    if runner is not None:
+        return runner(reference_features, query_features)
+
+    from scripts import oltw
+
+    return oltw.run_oltw(reference_features, query_features)
 
 
 def run_oltw_global(
     reference_features: FeatureSequence,
     query_features: FeatureSequence,
 ) -> AlignmentResult:
-    """Run an OLTW-global baseline through a registered adapter."""
+    """Run OLTW-global, preferring a registered override or falling back to the stub."""
 
-    return _run_registered_baseline("oltw_global", reference_features, query_features)
+    runner = _REGISTERED_BASELINES.get("oltw_global")
+    if runner is not None:
+        return runner(reference_features, query_features)
+
+    from scripts import oltw
+
+    return oltw.run_oltw_global(reference_features, query_features)
 
 
 def get_adapter_notes() -> dict[str, str]:
@@ -75,8 +87,9 @@ def get_adapter_notes() -> dict[str, str]:
     return {
         "input": "FeatureSequence for reference and query.",
         "output": "AlignmentResult with monotonic time mapping and method metadata.",
-        "registration": "Call register_online_baseline('oltw', runner) or register_online_baseline('oltw_global', runner).",
-        "next_step": "Wrap an existing OLTW or OLTW-global implementation behind this contract.",
+        "registration": "Call register_online_baseline('oltw', runner) or register_online_baseline('oltw_global', runner) to override the defaults.",
+        "default_oltw": "The `oltw` method now uses the built-in in-repo implementation if no override is registered.",
+        "next_step": "Extend the shared OLTW scoring and window helpers to implement OLTW-global.",
     }
 
 

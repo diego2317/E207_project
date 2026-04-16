@@ -50,5 +50,7 @@ mazurka_op24_no2,performance_b,mazurka_op24_no2/performance_b/audio.wav,mazurka_
 - `python -m scripts.run_benchmark --method offline_dtw --mode single --pair-id <reference__query>` runs one directed benchmark case.
 - `python -m scripts.run_benchmark --method offline_dtw --mode small` runs the fixed 3-recording preview benchmark (6 directed cases from the shortest eligible piece).
 - `python -m scripts.run_benchmark --method offline_dtw --mode full` runs the full directed benchmark set.
-- `scripts.online_baselines.register_online_baseline("oltw", runner)` and `register_online_baseline("oltw_global", runner)` plug external online baseline implementations into the same benchmark harness.
+- `python -m scripts.run_benchmark --method oltw --mode small` runs the built-in in-repo OLTW baseline.
+- `scripts.online_baselines.register_online_baseline("oltw", runner)` and `register_online_baseline("oltw_global", runner)` override the default online-baseline hooks with external implementations when needed.
+- `oltw_global` is intentionally registered at the interface level but still raises a clear `NotImplementedError` until that variant is implemented.
 - `scripts.visualization.plot_alignment_path(...)` and `scripts.visualization.plot_error_summary(...)` generate diagnostic plots for inspection.

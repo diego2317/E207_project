@@ -16,6 +16,7 @@ from scripts import (
     features,
     metrics,
     offline_dtw,
+    oltw,
     online_baselines,
     run_benchmark,
     visualization,
@@ -91,6 +92,36 @@ def test_offline_dtw_returns_monotonic_path() -> None:
     assert np.all(np.diff(result.path[:, 1]) >= 0)
 
 
+def test_oltw_returns_monotonic_path() -> None:
+    reference = FeatureSequence(
+        values=np.array([[0.0], [1.0], [2.0]], dtype=np.float64),
+        frame_times=np.array([0.0, 0.5, 1.0], dtype=np.float64),
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+        metadata={"recording_id": "reference"},
+    )
+    query = FeatureSequence(
+        values=np.array([[0.0], [1.0], [2.0]], dtype=np.float64),
+        frame_times=np.array([0.0, 0.5, 1.0], dtype=np.float64),
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+        metadata={"recording_id": "query"},
+    )
+
+    result = oltw.run_oltw(reference, query, metric="euclidean", search_radius=1)
+
+    assert result.method_name == "oltw"
+    assert tuple(result.path[0]) == (0, 0)
+    assert tuple(result.path[-1]) == (2, 2)
+    assert np.all(np.diff(result.path[:, 0]) >= 0)
+    assert np.all(np.diff(result.path[:, 1]) >= 0)
+    assert result.metadata["processed_query_frames"] == 3
+    assert result.metadata["scoring_mode"] == "cumulative"
+    assert result.metadata["window_policy"] == "adaptive_band"
+
+
 def test_compute_alignment_metrics_gives_zero_error_for_identity() -> None:
     alignment = AlignmentResult(
         method_name="offline_dtw",
@@ -154,6 +185,21 @@ def test_end_to_end_offline_benchmark_writes_outputs(tmp_path: Path) -> None:
     assert (output_dir / "synthetic_benchmark_summary.csv").exists()
 
 
+def test_run_alignment_benchmark_supports_in_repo_oltw(tmp_path: Path) -> None:
+    dataset_root = _build_synthetic_dataset(tmp_path)
+
+    metrics_frame = evaluation.run_alignment_benchmark(
+        dataset_root=dataset_root,
+        method_name="oltw",
+        save_outputs=False,
+        show_progress=False,
+    )
+
+    assert len(metrics_frame) == 2
+    assert set(metrics_frame["method_name"]) == {"oltw"}
+    assert (metrics_frame["mean_abs_error_s"] < 0.05).all()
+
+
 def test_run_alignment_benchmark_supports_registered_method(tmp_path: Path) -> None:
     dataset_root = _build_synthetic_dataset(tmp_path)
 
@@ -197,8 +243,8 @@ def test_get_alignment_runner_rejects_unknown_method() -> None:
         evaluation.get_alignment_runner("not_a_method")
 
 
-def test_online_baseline_adapter_requires_registration() -> None:
-    online_baselines.unregister_online_baseline("oltw")
+def test_oltw_global_raises_clear_placeholder_error() -> None:
+    online_baselines.unregister_online_baseline("oltw_global")
 
     reference = FeatureSequence(
         values=np.array([[0.0], [1.0]], dtype=np.float64),
@@ -215,8 +261,8 @@ def test_online_baseline_adapter_requires_registration() -> None:
         feature_name="toy",
     )
 
-    with pytest.raises(NotImplementedError, match="Register one via"):
-        online_baselines.run_oltw(reference, query)
+    with pytest.raises(NotImplementedError, match="OLTW-global is not yet implemented"):
+        online_baselines.run_oltw_global(reference, query)
 
 
 def test_select_recording_pairs_supports_single_small_and_full(tmp_path: Path) -> None:

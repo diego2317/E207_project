@@ -10,6 +10,7 @@ MODULES = [
     "scripts.metrics",
     "scripts.models",
     "scripts.offline_dtw",
+    "scripts.oltw",
     "scripts.online_baselines",
     "scripts.kalman_online",
     "scripts.evaluation",
