@@ -1,5 +1,6 @@
 name: e207-bench
 channels:
+  - conda-forge
   - defaults
 dependencies:
   - python=3.10.10
