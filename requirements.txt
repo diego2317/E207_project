@@ -1,12 +1,14 @@
+--prefer-binary
+
 # Core numerical and analysis tools
-numpy
-scipy
-pandas
-matplotlib
+numpy==1.26.4
+scipy==1.15.3
+pandas==2.2.2
+matplotlib==3.9.4
 
 # Audio and feature extraction
-librosa
-soundfile
+librosa==0.10.2.post1
+soundfile==0.12.1
 
 # Notebook workflow
 jupyter
