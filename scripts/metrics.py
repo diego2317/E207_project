@@ -10,7 +10,8 @@ import pandas as pd
 from scripts.models import AlignmentResult
 
 
-DEFAULT_TOLERANCES = (0.05, 0.1, 0.2)
+# Tolerances in seconds
+DEFAULT_TOLERANCES = (0.01, 0.020, 0.050, 0.100, 0.200, 0.500)
 
 
 def estimate_query_times(

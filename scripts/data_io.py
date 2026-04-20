@@ -48,7 +48,9 @@ def build_recording_pairs(
     pairs: list[RecordingPair] = []
     for piece, piece_recordings in grouped.items():
         ordered = sorted(piece_recordings, key=lambda item: item.recording_id)
-        for reference, query in itertools.permutations(ordered, 2):
+
+        # itertools.combinations tests each recording only once (i.e. it does not appear as a query and reference)
+        for reference, query in itertools.combinations(ordered, 2):
             pairs.append(RecordingPair(piece=piece, reference=reference, query=query))
     return pairs
 
