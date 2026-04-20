@@ -15,6 +15,7 @@ MODULES = [
     "scripts.kalman_online",
     "scripts.evaluation",
     "scripts.run_benchmark",
+    "scripts.aggregate_benchmark",
     "scripts.visualization",
     "scripts.utils",
 ]

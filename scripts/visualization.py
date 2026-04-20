@@ -58,3 +58,35 @@ def plot_error_summary(
     if output_path is not None:
         figure.savefig(Path(output_path), dpi=150, bbox_inches="tight")
     return figure, axis
+
+
+def plot_tolerance_curve(
+    tolerance_frame: pd.DataFrame,
+    output_path: Path | str | None = None,
+):
+    """Plot error rate versus tolerance for one or more benchmark methods."""
+
+    if tolerance_frame.empty:
+        raise ValueError("tolerance_frame must not be empty.")
+
+    figure, axis = plt.subplots(figsize=(8, 4.5))
+    plot_frame = tolerance_frame.sort_values(["method_name", "tolerance_s"])
+    for method_name, method_frame in plot_frame.groupby("method_name", dropna=False):
+        axis.plot(
+            method_frame["tolerance_s"] * 1000.0,
+            method_frame["error_rate"],
+            linewidth=2.0,
+            label=str(method_name),
+        )
+
+    axis.set_title("Error Rate vs Tolerance")
+    axis.set_xlabel("Tolerance (ms)")
+    axis.set_ylabel("Error rate")
+    axis.set_ylim(0.0, 1.0)
+    axis.grid(alpha=0.3)
+    axis.legend()
+    figure.tight_layout()
+
+    if output_path is not None:
+        figure.savefig(Path(output_path), dpi=150, bbox_inches="tight")
+    return figure, axis

@@ -2,23 +2,25 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Literal
 
+import numpy as np
 import pandas as pd
 import soundfile as sf
 from tqdm.auto import tqdm
 
 from scripts import data_io, features, metrics, offline_dtw, online_baselines
-from scripts.config import DEFAULT_SAMPLE_RATE, METRICS_DIR
-from scripts.models import AlignmentResult, Recording, RecordingPair
+from scripts.config import DEFAULT_HOP_LENGTH, DEFAULT_SAMPLE_RATE, METRICS_DIR
+from scripts.models import AlignmentResult, FeatureSequence, Recording, RecordingPair
 
 
 AlignmentRunner = Callable[..., AlignmentResult]
-BenchmarkSelectionMode = Literal["single", "small", "full"]
+BenchmarkSelectionMode = Literal["single", "small", "full", "all_pairs", "paper_test"]
 SMALL_BENCHMARK_RECORDING_COUNT = 3
 DEFAULT_METHOD_NAME = "offline_dtw"
+DEFAULT_DEVELOPMENT_PIECE = "Chopin_Op030No2"
 _ALIGNMENT_RUNNERS: dict[str, AlignmentRunner] = {
     DEFAULT_METHOD_NAME: offline_dtw.run_offline_dtw,
     "oltw": online_baselines.run_oltw,
@@ -66,32 +68,58 @@ def evaluate_recording_pair(
     runner: AlignmentRunner | None = None,
     sample_rate: int = DEFAULT_SAMPLE_RATE,
     feature_name: str = "chroma_stft",
-) -> tuple[AlignmentResult, dict[str, object]]:
+    runner_kwargs: dict[str, object] | None = None,
+    metric_tolerances: Iterable[float] = metrics.DEFAULT_TOLERANCES,
+) -> tuple[AlignmentResult, dict[str, object], pd.DataFrame]:
     """Run one alignment method on one benchmark pair."""
 
-    (reference_audio, ref_sr), (query_audio, query_sr) = data_io.load_pair_audio(
-        pair,
-        sample_rate=sample_rate,
-    )
-    reference_features = features.compute_features(
-        reference_audio,
-        sr=ref_sr,
-        feature_name=feature_name,
-    )
-    reference_features.metadata["recording_id"] = pair.reference.recording_id
+    selected_runner = runner or get_alignment_runner(method_name)
+    if _runner_uses_audio_paths(selected_runner):
+        reference_features = _build_timeline_features(
+            pair.reference,
+            sample_rate=sample_rate,
+            feature_name=feature_name,
+        )
+        query_features = _build_timeline_features(
+            pair.query,
+            sample_rate=sample_rate,
+            feature_name=feature_name,
+        )
+    else:
+        (reference_audio, ref_sr), (query_audio, query_sr) = data_io.load_pair_audio(
+            pair,
+            sample_rate=sample_rate,
+        )
+        reference_features = features.compute_features(
+            reference_audio,
+            sr=ref_sr,
+            feature_name=feature_name,
+        )
+        query_features = features.compute_features(
+            query_audio,
+            sr=query_sr,
+            feature_name=feature_name,
+        )
+        reference_features.metadata["audio_path"] = str(pair.reference.audio_path)
+        query_features.metadata["audio_path"] = str(pair.query.audio_path)
 
-    query_features = features.compute_features(
-        query_audio,
-        sr=query_sr,
-        feature_name=feature_name,
-    )
+    reference_features.metadata["recording_id"] = pair.reference.recording_id
     query_features.metadata["recording_id"] = pair.query.recording_id
 
-    selected_runner = runner or get_alignment_runner(method_name)
-    alignment_result = selected_runner(reference_features, query_features)
+    alignment_result = selected_runner(
+        reference_features,
+        query_features,
+        **(runner_kwargs or {}),
+    )
     reference_beats = data_io.load_beat_timestamps(pair.reference.beats_path)
     query_beats = data_io.load_beat_timestamps(pair.query.beats_path)
     metric_row = metrics.compute_alignment_metrics(
+        alignment_result,
+        reference_beats=reference_beats,
+        query_beats=query_beats,
+        tolerances=metric_tolerances,
+    )
+    error_frame = metrics.compute_alignment_error_trace(
         alignment_result,
         reference_beats=reference_beats,
         query_beats=query_beats,
@@ -103,7 +131,10 @@ def evaluate_recording_pair(
             "feature_name": feature_name,
         }
     )
-    return alignment_result, metric_row
+    error_frame["piece"] = pair.piece
+    error_frame["pair_id"] = pair.pair_id
+    error_frame["feature_name"] = feature_name
+    return alignment_result, metric_row, error_frame
 
 
 def benchmark_recording_pairs(
@@ -114,6 +145,9 @@ def benchmark_recording_pairs(
     feature_name: str = "chroma_stft",
     output_dir: Path | str = METRICS_DIR,
     experiment_name: str = "alignment_benchmark",
+    runner_kwargs: dict[str, object] | None = None,
+    metric_tolerances: Iterable[float] = metrics.DEFAULT_TOLERANCES,
+    tolerance_grid: Iterable[float] | None = None,
     save_outputs: bool = True,
     show_progress: bool = False,
 ) -> pd.DataFrame:
@@ -123,47 +157,76 @@ def benchmark_recording_pairs(
         raise ValueError("No benchmark cases were provided for benchmarking.")
 
     metric_rows: list[dict[str, object]] = []
+    error_frames: list[pd.DataFrame] = []
     iterator = tqdm(pairs, desc=experiment_name) if show_progress else pairs
     for pair in iterator:
-        _, metric_row = evaluate_recording_pair(
+        _, metric_row, error_frame = evaluate_recording_pair(
             pair,
             method_name=method_name,
             runner=runner,
             sample_rate=sample_rate,
             feature_name=feature_name,
+            runner_kwargs=runner_kwargs,
+            metric_tolerances=metric_tolerances,
         )
         metric_rows.append(metric_row)
+        error_frames.append(error_frame)
 
     metrics_frame = pd.DataFrame(metric_rows)
+    error_rows = pd.concat(error_frames, ignore_index=True)
     if save_outputs:
-        save_benchmark_outputs(metrics_frame, output_dir=output_dir, experiment_name=experiment_name)
+        save_benchmark_outputs(
+            metrics_frame,
+            error_rows,
+            output_dir=output_dir,
+            experiment_name=experiment_name,
+            tolerance_grid=tolerance_grid,
+        )
     return metrics_frame
 
 
 def select_recording_pairs(
     pairs: list[RecordingPair],
-    selection_mode: BenchmarkSelectionMode = "full",
+    selection_mode: BenchmarkSelectionMode = "all_pairs",
     pair_id: str | None = None,
     subset_size: int = 10,
+    development_piece: str = DEFAULT_DEVELOPMENT_PIECE,
+    max_warp_factor: float | None = None,
 ) -> list[RecordingPair]:
     """Select benchmark cases for a given benchmark mode."""
 
     ordered_pairs = sorted(pairs, key=lambda item: (item.piece, item.pair_id))
-    if selection_mode == "full":
-        return ordered_pairs
-
-    if selection_mode == "small":
-        return _select_small_benchmark_pairs(ordered_pairs)
-
-    if selection_mode == "single":
+    if selection_mode in {"full", "all_pairs"}:
+        selected_pairs = ordered_pairs
+    elif selection_mode == "paper_test":
+        selected_pairs = [
+            pair for pair in ordered_pairs if pair.piece != development_piece
+        ]
+    elif selection_mode == "small":
+        selected_pairs = _select_small_benchmark_pairs(ordered_pairs)
+    elif selection_mode == "single":
         if not pair_id:
             raise ValueError("pair_id is required when selection_mode='single'.")
         for pair in ordered_pairs:
             if pair.pair_id == pair_id:
-                return [pair]
-        raise ValueError(f"Pair '{pair_id}' was not found in the discovered benchmark pairs.")
+                selected_pairs = [pair]
+                break
+        else:
+            raise ValueError(f"Pair '{pair_id}' was not found in the discovered benchmark pairs.")
+    else:
+        raise ValueError(f"Unsupported selection_mode: {selection_mode}")
 
-    raise ValueError(f"Unsupported selection_mode: {selection_mode}")
+    if max_warp_factor is not None:
+        selected_pairs = [
+            pair
+            for pair in selected_pairs
+            if estimate_average_warping_factor(pair) <= max_warp_factor
+        ]
+    if not selected_pairs:
+        raise ValueError(
+            f"No benchmark pairs remained after applying selection_mode={selection_mode!r}."
+        )
+    return selected_pairs
 
 
 def select_preview_recording_pair(pairs: list[RecordingPair]) -> RecordingPair:
@@ -181,9 +244,14 @@ def run_alignment_benchmark(
     feature_name: str = "chroma_stft",
     output_dir: Path | str = METRICS_DIR,
     experiment_name: str = "alignment_benchmark",
-    selection_mode: BenchmarkSelectionMode = "full",
+    selection_mode: BenchmarkSelectionMode = "all_pairs",
     pair_id: str | None = None,
     subset_size: int = 10,
+    runner_kwargs: dict[str, object] | None = None,
+    metric_tolerances: Iterable[float] = metrics.DEFAULT_TOLERANCES,
+    tolerance_grid: Iterable[float] | None = None,
+    development_piece: str = DEFAULT_DEVELOPMENT_PIECE,
+    max_warp_factor: float | None = None,
     save_outputs: bool = True,
     show_progress: bool = False,
 ) -> pd.DataFrame:
@@ -196,6 +264,8 @@ def run_alignment_benchmark(
         selection_mode=selection_mode,
         pair_id=pair_id,
         subset_size=subset_size,
+        development_piece=development_piece,
+        max_warp_factor=max_warp_factor,
     )
     return benchmark_recording_pairs(
         selected_pairs,
@@ -205,6 +275,9 @@ def run_alignment_benchmark(
         feature_name=feature_name,
         output_dir=output_dir,
         experiment_name=experiment_name,
+        runner_kwargs=runner_kwargs,
+        metric_tolerances=metric_tolerances,
+        tolerance_grid=tolerance_grid,
         save_outputs=save_outputs,
         show_progress=show_progress,
     )
@@ -216,9 +289,13 @@ def run_offline_benchmark(
     feature_name: str = "chroma_stft",
     output_dir: Path | str = METRICS_DIR,
     experiment_name: str = "offline_dtw_benchmark",
-    selection_mode: BenchmarkSelectionMode = "full",
+    selection_mode: BenchmarkSelectionMode = "all_pairs",
     pair_id: str | None = None,
     subset_size: int = 10,
+    metric_tolerances: Iterable[float] = metrics.DEFAULT_TOLERANCES,
+    tolerance_grid: Iterable[float] | None = None,
+    development_piece: str = DEFAULT_DEVELOPMENT_PIECE,
+    max_warp_factor: float | None = None,
     save_outputs: bool = True,
     show_progress: bool = False,
 ) -> pd.DataFrame:
@@ -234,6 +311,10 @@ def run_offline_benchmark(
         selection_mode=selection_mode,
         pair_id=pair_id,
         subset_size=subset_size,
+        metric_tolerances=metric_tolerances,
+        tolerance_grid=tolerance_grid,
+        development_piece=development_piece,
+        max_warp_factor=max_warp_factor,
         save_outputs=save_outputs,
         show_progress=show_progress,
     )
@@ -241,9 +322,11 @@ def run_offline_benchmark(
 
 def save_benchmark_outputs(
     metrics_frame: pd.DataFrame,
+    error_rows: pd.DataFrame,
     output_dir: Path | str = METRICS_DIR,
     experiment_name: str = "offline_dtw_benchmark",
-) -> tuple[Path, Path]:
+    tolerance_grid: Iterable[float] | None = None,
+) -> tuple[Path, Path, Path, Path]:
     """Persist per-pair metrics and aggregated summaries."""
 
     destination = Path(output_dir)
@@ -251,10 +334,17 @@ def save_benchmark_outputs(
 
     pair_metrics_path = destination / f"{experiment_name}_pairs.csv"
     summary_path = destination / f"{experiment_name}_summary.csv"
+    beat_errors_path = destination / f"{experiment_name}_beat_errors.csv"
+    tolerance_curve_path = destination / f"{experiment_name}_tolerance_curve.csv"
 
     metrics_frame.to_csv(pair_metrics_path, index=False)
     metrics.summarize_metrics(metrics_frame).to_csv(summary_path, index=False)
-    return pair_metrics_path, summary_path
+    error_rows.to_csv(beat_errors_path, index=False)
+    metrics.compute_tolerance_curve(
+        error_rows,
+        tolerances=tolerance_grid,
+    ).to_csv(tolerance_curve_path, index=False)
+    return pair_metrics_path, summary_path, beat_errors_path, tolerance_curve_path
 
 
 def _select_small_benchmark_pairs(pairs: list[RecordingPair]) -> list[RecordingPair]:
@@ -298,6 +388,51 @@ def _collect_recordings_by_piece(pairs: list[RecordingPair]) -> dict[str, list[R
         piece: [recordings[recording_id] for recording_id in sorted(recordings)]
         for piece, recordings in grouped.items()
     }
+
+
+def _runner_uses_audio_paths(runner: AlignmentRunner) -> bool:
+    return bool(getattr(runner, "uses_audio_paths", False))
+
+
+def _build_timeline_features(
+    recording: Recording,
+    sample_rate: int = DEFAULT_SAMPLE_RATE,
+    feature_name: str = "chroma_stft",
+    hop_length: int = DEFAULT_HOP_LENGTH,
+) -> FeatureSequence:
+    duration_s = get_recording_duration_s(recording)
+    frame_count = max(1, int(np.floor((duration_s * sample_rate) / hop_length)) + 1)
+    frame_times = np.arange(frame_count, dtype=np.float64) * (hop_length / sample_rate)
+    return FeatureSequence(
+        values=np.zeros((frame_count, 1), dtype=np.float64),
+        frame_times=frame_times,
+        sample_rate=sample_rate,
+        hop_length=hop_length,
+        feature_name=feature_name,
+        metadata={
+            "audio_path": str(recording.audio_path),
+            "recording_id": recording.recording_id,
+            "duration_s": duration_s,
+        },
+    )
+
+
+def get_recording_duration_s(recording: Recording) -> float:
+    """Return one recording duration, caching the metadata lookup."""
+
+    return _recording_duration_seconds(recording)
+
+
+def estimate_average_warping_factor(pair: RecordingPair) -> float:
+    """Estimate the pairwise duration ratio used for paper-style filtering."""
+
+    reference_duration = get_recording_duration_s(pair.reference)
+    query_duration = get_recording_duration_s(pair.query)
+    shorter = min(reference_duration, query_duration)
+    longer = max(reference_duration, query_duration)
+    if shorter <= 0:
+        raise ValueError(f"Non-positive recording duration encountered for pair {pair.pair_id}.")
+    return longer / shorter
 
 
 def _recording_duration_seconds(recording: Recording) -> float:

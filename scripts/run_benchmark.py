@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from scripts import evaluation
+from scripts import evaluation, metrics, oltw as oltw_backend
 from scripts.config import DEFAULT_SAMPLE_RATE, METRICS_DIR, RAW_DATA_DIR
 
 
@@ -19,9 +19,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--mode",
-        choices=("single", "small", "full"),
-        default="full",
-        help="Select one directed benchmark case, a fixed 3-recording preview set, or the full dataset.",
+        choices=("single", "small", "full", "all_pairs", "paper_test"),
+        default="all_pairs",
+        help=(
+            "Select one directed benchmark case, a fixed 3-recording preview set, "
+            "all directed pairs, or the paper-style held-out test subset."
+        ),
     )
     parser.add_argument(
         "--pair-id",
@@ -63,6 +66,35 @@ def build_parser() -> argparse.ArgumentParser:
         help="Audio sample rate used when loading recordings.",
     )
     parser.add_argument(
+        "--development-piece",
+        default=evaluation.DEFAULT_DEVELOPMENT_PIECE,
+        help="Piece reserved for development when --mode=paper_test.",
+    )
+    parser.add_argument(
+        "--exclude-warp-factor-above",
+        type=float,
+        default=None,
+        help="Optionally exclude pairs whose duration ratio exceeds this threshold.",
+    )
+    parser.add_argument(
+        "--jar-path",
+        type=Path,
+        default=oltw_backend.DEFAULT_JAR_PATH,
+        help="Path to PerformanceMatcher.jar for the oltw baselines.",
+    )
+    parser.add_argument(
+        "--tolerance-max-seconds",
+        type=float,
+        default=metrics.DEFAULT_MAX_TOLERANCE_S,
+        help="Maximum tolerance value included in the saved error-rate sweep CSV.",
+    )
+    parser.add_argument(
+        "--tolerance-step-seconds",
+        type=float,
+        default=metrics.DEFAULT_TOLERANCE_STEP_S,
+        help="Tolerance step size used for the saved error-rate sweep CSV.",
+    )
+    parser.add_argument(
         "--show-progress",
         action="store_true",
         help="Display a progress bar while processing benchmark pairs.",
@@ -79,6 +111,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
+    runner_kwargs: dict[str, object] | None = None
+    if args.method in {"oltw", "oltw_global"}:
+        runner_kwargs = {"jar_path": args.jar_path}
+
+    tolerance_grid = metrics.build_tolerance_grid(
+        max_tolerance_s=args.tolerance_max_seconds,
+        step_s=args.tolerance_step_seconds,
+    )
     experiment_name = args.experiment_name or _default_experiment_name(
         method_name=args.method,
         mode=args.mode,
@@ -94,6 +134,10 @@ def main(argv: list[str] | None = None) -> int:
         selection_mode=args.mode,
         pair_id=args.pair_id,
         subset_size=args.subset_size,
+        runner_kwargs=runner_kwargs,
+        tolerance_grid=tolerance_grid,
+        development_piece=args.development_piece,
+        max_warp_factor=args.exclude_warp_factor_above,
         save_outputs=not args.no_save,
         show_progress=args.show_progress,
     )
@@ -109,8 +153,10 @@ def _default_experiment_name(method_name: str, mode: str, pair_id: str | None) -
         return f"{method_name}_single_{pair_id}"
     if mode == "small":
         return f"{method_name}_small"
-    if mode == "full":
-        return f"{method_name}_full"
+    if mode in {"full", "all_pairs"}:
+        return f"{method_name}_all_pairs"
+    if mode == "paper_test":
+        return f"{method_name}_paper_test"
     return f"{method_name}_benchmark"
 
 

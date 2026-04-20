@@ -1,0 +1,214 @@
+Server Benchmark Instructions
+=============================
+
+This project should be run from the repository root, using only the virtual
+environment in this folder.
+
+Assumptions
+-----------
+- The repo is already present on the server.
+- The dataset is available under `data/raw`.
+- `PerformanceMatcher.jar` is present in the repo root, or you know its
+  absolute path.
+- `java` is installed and available on `PATH`.
+- You want to benchmark `offline_dtw`, `oltw`, and `oltw_global`.
+
+Important rule
+--------------
+Do not use `python` directly. Use `./.venv/bin/python` for every command below.
+
+1. Prepare the server session
+-----------------------------
+From the repo root:
+
+```bash
+cd /path/to/E207_project
+./.venv/bin/python --version
+java -version
+test -f PerformanceMatcher.jar && echo "PerformanceMatcher.jar found"
+```
+
+Optional: create the output directories up front.
+
+```bash
+mkdir -p outputs/metrics outputs/figures outputs/logs
+```
+
+2. Sanity check with a small run
+--------------------------------
+Before launching the full benchmark, run one preview job per method.
+
+`offline_dtw` preview:
+
+```bash
+./.venv/bin/python -m scripts.run_benchmark \
+  --method offline_dtw \
+  --mode small \
+  --experiment-name offline_dtw_small_server_check \
+  --show-progress
+```
+
+`oltw` preview:
+
+```bash
+./.venv/bin/python -m scripts.run_benchmark \
+  --method oltw \
+  --mode small \
+  --jar-path /absolute/path/to/PerformanceMatcher.jar \
+  --experiment-name oltw_small_server_check \
+  --show-progress
+```
+
+`oltw_global` preview:
+
+```bash
+./.venv/bin/python -m scripts.run_benchmark \
+  --method oltw_global \
+  --mode small \
+  --jar-path /absolute/path/to/PerformanceMatcher.jar \
+  --experiment-name oltw_global_small_server_check \
+  --show-progress
+```
+
+3. Optional paper-style validation
+----------------------------------
+If you want a validation run before the full all-pairs benchmark, use
+`paper_test`. By default, the development piece is `Chopin_Op030No2`.
+
+Example:
+
+```bash
+./.venv/bin/python -m scripts.run_benchmark \
+  --method offline_dtw \
+  --mode paper_test \
+  --development-piece Chopin_Op030No2 \
+  --experiment-name offline_dtw_paper_test \
+  --show-progress
+```
+
+If you want to exclude pairs with large duration mismatch, add:
+
+```bash
+--exclude-warp-factor-above 2
+```
+
+4. Launch the full benchmark in tmux
+------------------------------------
+Run each method in its own tmux session so the jobs can continue in the
+background.
+
+Start the `offline_dtw` session:
+
+```bash
+tmux new -s dtw_bench
+./.venv/bin/python -m scripts.run_benchmark \
+  --method offline_dtw \
+  --mode all_pairs \
+  --experiment-name offline_dtw_all_pairs \
+  --show-progress 2>&1 | tee outputs/logs/offline_dtw_all_pairs.log
+```
+
+Detach from tmux with:
+
+```bash
+Ctrl-b d
+```
+
+Start the `oltw` session:
+
+```bash
+tmux new -s oltw_bench
+./.venv/bin/python -m scripts.run_benchmark \
+  --method oltw \
+  --mode all_pairs \
+  --jar-path /absolute/path/to/PerformanceMatcher.jar \
+  --experiment-name oltw_all_pairs \
+  --show-progress 2>&1 | tee outputs/logs/oltw_all_pairs.log
+```
+
+Detach again with `Ctrl-b d`.
+
+Start the `oltw_global` session:
+
+```bash
+tmux new -s oltw_global_bench
+./.venv/bin/python -m scripts.run_benchmark \
+  --method oltw_global \
+  --mode all_pairs \
+  --jar-path /absolute/path/to/PerformanceMatcher.jar \
+  --experiment-name oltw_global_all_pairs \
+  --show-progress 2>&1 | tee outputs/logs/oltw_global_all_pairs.log
+```
+
+Useful tmux commands:
+
+```bash
+tmux ls
+tmux attach -t dtw_bench
+tmux attach -t oltw_bench
+tmux attach -t oltw_global_bench
+```
+
+5. Aggregate the error-rate-vs-tolerance figure
+-----------------------------------------------
+After all three runs finish, combine the saved beat-error files into one
+comparison curve and figure.
+
+```bash
+./.venv/bin/python -m scripts.aggregate_benchmark \
+  --beat-errors \
+  outputs/metrics/offline_dtw_all_pairs_beat_errors.csv \
+  outputs/metrics/oltw_all_pairs_beat_errors.csv \
+  outputs/metrics/oltw_global_all_pairs_beat_errors.csv \
+  --experiment-name mazurka_all_pairs
+```
+
+This writes:
+- `outputs/metrics/mazurka_all_pairs_tolerance_curve.csv`
+- `outputs/figures/mazurka_all_pairs_error_rate_vs_tolerance.png`
+
+6. Files produced by each benchmark run
+---------------------------------------
+Each `scripts.run_benchmark` run writes these files under `outputs/metrics`
+unless you override `--output-dir`.
+
+For experiment name `EXPERIMENT_NAME`, expect:
+
+- `outputs/metrics/EXPERIMENT_NAME_pairs.csv`
+- `outputs/metrics/EXPERIMENT_NAME_summary.csv`
+- `outputs/metrics/EXPERIMENT_NAME_beat_errors.csv`
+- `outputs/metrics/EXPERIMENT_NAME_tolerance_curve.csv`
+
+7. Useful optional flags
+------------------------
+- `--tolerance-max-seconds 1.0`
+- `--tolerance-step-seconds 0.01`
+- `--development-piece Chopin_Op030No2`
+- `--exclude-warp-factor-above 2`
+- `--output-dir /path/to/output_metrics_dir`
+
+8. If you need to convert a notebook instead
+--------------------------------------------
+The benchmark CLI is the preferred server path. If you still want a notebook
+copy for inspection, convert it to a Python script first, but keep the actual
+benchmark commands the same as above and continue using `./.venv/bin/python`.
+
+9. Minimal end-to-end command list
+----------------------------------
+If you only want the shortest possible sequence:
+
+```bash
+cd /path/to/E207_project
+mkdir -p outputs/metrics outputs/figures outputs/logs
+
+tmux new -s dtw_bench
+./.venv/bin/python -m scripts.run_benchmark --method offline_dtw --mode all_pairs --experiment-name offline_dtw_all_pairs --show-progress 2>&1 | tee outputs/logs/offline_dtw_all_pairs.log
+
+tmux new -s oltw_bench
+./.venv/bin/python -m scripts.run_benchmark --method oltw --mode all_pairs --jar-path /absolute/path/to/PerformanceMatcher.jar --experiment-name oltw_all_pairs --show-progress 2>&1 | tee outputs/logs/oltw_all_pairs.log
+
+tmux new -s oltw_global_bench
+./.venv/bin/python -m scripts.run_benchmark --method oltw_global --mode all_pairs --jar-path /absolute/path/to/PerformanceMatcher.jar --experiment-name oltw_global_all_pairs --show-progress 2>&1 | tee outputs/logs/oltw_global_all_pairs.log
+
+./.venv/bin/python -m scripts.aggregate_benchmark --beat-errors outputs/metrics/offline_dtw_all_pairs_beat_errors.csv outputs/metrics/oltw_all_pairs_beat_errors.csv outputs/metrics/oltw_global_all_pairs_beat_errors.csv --experiment-name mazurka_all_pairs
+```

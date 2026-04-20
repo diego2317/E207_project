@@ -12,6 +12,8 @@ from scripts.models import AlignmentResult
 
 # Tolerances in seconds
 DEFAULT_TOLERANCES = (0.01, 0.020, 0.050, 0.100, 0.200, 0.500)
+DEFAULT_TOLERANCE_STEP_S = 0.01
+DEFAULT_MAX_TOLERANCE_S = 1.0
 
 
 def estimate_query_times(
@@ -60,23 +62,19 @@ def compute_alignment_metrics(
 ) -> dict[str, float | int | str]:
     """Compare an estimated query-to-reference alignment against beat correspondence."""
 
-    reference_beats = np.asarray(reference_beats, dtype=np.float64)
-    query_beats = np.asarray(query_beats, dtype=np.float64)
-    num_beats = min(reference_beats.size, query_beats.size)
-    if num_beats == 0:
-        raise ValueError("Both recordings must contain at least one beat timestamp.")
-
-    query_eval = query_beats[:num_beats]
-    reference_eval = reference_beats[:num_beats]
-    estimated_reference = estimate_reference_times(alignment_result, query_eval)
-    errors = estimated_reference - reference_eval
-    abs_errors = np.abs(errors)
+    error_frame = compute_alignment_error_trace(
+        alignment_result,
+        reference_beats=reference_beats,
+        query_beats=query_beats,
+    )
+    errors = error_frame["error_s"].to_numpy(dtype=np.float64)
+    abs_errors = error_frame["abs_error_s"].to_numpy(dtype=np.float64)
 
     metrics: dict[str, float | int | str] = {
         "method_name": alignment_result.method_name,
         "reference_id": alignment_result.reference_id,
         "query_id": alignment_result.query_id,
-        "num_beats_used": int(num_beats),
+        "num_beats_used": int(error_frame.shape[0]),
         "mean_error_s": float(np.mean(errors)),
         "mean_abs_error_s": float(np.mean(abs_errors)),
         "median_abs_error_s": float(np.median(abs_errors)),
@@ -92,6 +90,40 @@ def compute_alignment_metrics(
     return metrics
 
 
+def compute_alignment_error_trace(
+    alignment_result: AlignmentResult,
+    reference_beats: np.ndarray,
+    query_beats: np.ndarray,
+) -> pd.DataFrame:
+    """Return per-beat alignment errors for one reference/query pair."""
+
+    reference_beats = np.asarray(reference_beats, dtype=np.float64)
+    query_beats = np.asarray(query_beats, dtype=np.float64)
+    num_beats = min(reference_beats.size, query_beats.size)
+    if num_beats == 0:
+        raise ValueError("Both recordings must contain at least one beat timestamp.")
+
+    query_eval = query_beats[:num_beats]
+    reference_eval = reference_beats[:num_beats]
+    estimated_reference = estimate_reference_times(alignment_result, query_eval)
+    errors = estimated_reference - reference_eval
+    abs_errors = np.abs(errors)
+
+    return pd.DataFrame(
+        {
+            "method_name": alignment_result.method_name,
+            "reference_id": alignment_result.reference_id,
+            "query_id": alignment_result.query_id,
+            "beat_index": np.arange(num_beats, dtype=np.int64),
+            "reference_beat_time_s": reference_eval,
+            "query_beat_time_s": query_eval,
+            "estimated_reference_time_s": estimated_reference,
+            "error_s": errors,
+            "abs_error_s": abs_errors,
+        }
+    )
+
+
 def summarize_metrics(metric_rows: pd.DataFrame | list[dict[str, object]]) -> pd.DataFrame:
     """Aggregate per-pair metrics into a compact summary table."""
 
@@ -99,20 +131,73 @@ def summarize_metrics(metric_rows: pd.DataFrame | list[dict[str, object]]) -> pd
     if frame.empty:
         return pd.DataFrame()
 
-    summary = (
-        frame.groupby("method_name", dropna=False)
-        .agg(
-            num_pairs=("method_name", "size"),
-            mean_mae_s=("mean_abs_error_s", "mean"),
-            median_mae_s=("mean_abs_error_s", "median"),
-            mean_rmse_s=("rmse_s", "mean"),
-            mean_p95_abs_error_s=("p95_abs_error_s", "mean"),
-            mean_within_100ms=("within_100ms", "mean"),
-            mean_within_200ms=("within_200ms", "mean"),
+    aggregation_spec: dict[str, tuple[str, str]] = {
+        "num_pairs": ("method_name", "size"),
+        "mean_mae_s": ("mean_abs_error_s", "mean"),
+        "median_mae_s": ("mean_abs_error_s", "median"),
+        "mean_rmse_s": ("rmse_s", "mean"),
+        "mean_p95_abs_error_s": ("p95_abs_error_s", "mean"),
+    }
+    within_columns = sorted(column for column in frame.columns if column.startswith("within_"))
+    for column in within_columns:
+        aggregation_spec[f"mean_{column}"] = (column, "mean")
+
+    return frame.groupby("method_name", dropna=False).agg(**aggregation_spec).reset_index()
+
+
+def build_tolerance_grid(
+    max_tolerance_s: float = DEFAULT_MAX_TOLERANCE_S,
+    step_s: float = DEFAULT_TOLERANCE_STEP_S,
+) -> np.ndarray:
+    """Build an inclusive tolerance grid for error-rate sweeps."""
+
+    if max_tolerance_s <= 0:
+        raise ValueError("max_tolerance_s must be positive.")
+    if step_s <= 0:
+        raise ValueError("step_s must be positive.")
+
+    grid = np.arange(0.0, max_tolerance_s + (step_s * 0.5), step_s, dtype=np.float64)
+    if grid.size == 0 or grid[-1] < max_tolerance_s:
+        grid = np.append(grid, max_tolerance_s)
+    return np.unique(np.clip(grid, 0.0, max_tolerance_s))
+
+
+def compute_tolerance_curve(
+    error_rows: pd.DataFrame | list[dict[str, object]],
+    tolerances: Iterable[float] | None = None,
+) -> pd.DataFrame:
+    """Aggregate error-rate-versus-tolerance curves from per-beat error rows."""
+
+    frame = error_rows if isinstance(error_rows, pd.DataFrame) else pd.DataFrame(error_rows)
+    if frame.empty:
+        return pd.DataFrame(
+            columns=["method_name", "tolerance_s", "correct_rate", "error_rate", "num_predictions"]
         )
-        .reset_index()
+
+    tolerance_values = (
+        np.asarray(tuple(tolerances), dtype=np.float64)
+        if tolerances is not None
+        else build_tolerance_grid()
     )
-    return summary
+    tolerance_values = np.sort(np.unique(tolerance_values))
+
+    rows: list[dict[str, float | int | str]] = []
+    for method_name, method_frame in frame.groupby("method_name", dropna=False):
+        abs_errors = method_frame["abs_error_s"].to_numpy(dtype=np.float64)
+        if abs_errors.size == 0:
+            continue
+        for tolerance in tolerance_values:
+            correct_rate = float(np.mean(abs_errors <= tolerance))
+            rows.append(
+                {
+                    "method_name": method_name,
+                    "tolerance_s": float(tolerance),
+                    "correct_rate": correct_rate,
+                    "error_rate": float(1.0 - correct_rate),
+                    "num_predictions": int(abs_errors.size),
+                }
+            )
+    return pd.DataFrame(rows)
 
 
 def _collapse_duplicates(

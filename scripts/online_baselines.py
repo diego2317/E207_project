@@ -54,31 +54,33 @@ def list_registered_online_baselines() -> tuple[str, ...]:
 def run_oltw(
     reference_features: FeatureSequence,
     query_features: FeatureSequence,
+    **runner_kwargs: object,
 ) -> AlignmentResult:
     """Run OLTW, preferring a registered override but defaulting to the in-repo runner."""
 
     runner = _REGISTERED_BASELINES.get("oltw")
     if runner is not None:
-        return runner(reference_features, query_features)
+        return runner(reference_features, query_features, **runner_kwargs)
 
     from scripts import oltw
 
-    return oltw.run_oltw(reference_features, query_features)
+    return oltw.run_oltw(reference_features, query_features, **runner_kwargs)
 
 
 def run_oltw_global(
     reference_features: FeatureSequence,
     query_features: FeatureSequence,
+    **runner_kwargs: object,
 ) -> AlignmentResult:
     """Run OLTW-global, preferring a registered override or falling back to the stub."""
 
     runner = _REGISTERED_BASELINES.get("oltw_global")
     if runner is not None:
-        return runner(reference_features, query_features)
+        return runner(reference_features, query_features, **runner_kwargs)
 
     from scripts import oltw
 
-    return oltw.run_oltw_global(reference_features, query_features)
+    return oltw.run_oltw_global(reference_features, query_features, **runner_kwargs)
 
 
 def get_adapter_notes() -> dict[str, str]:
@@ -88,8 +90,8 @@ def get_adapter_notes() -> dict[str, str]:
         "input": "FeatureSequence for reference and query.",
         "output": "AlignmentResult with monotonic time mapping and method metadata.",
         "registration": "Call register_online_baseline('oltw', runner) or register_online_baseline('oltw_global', runner) to override the defaults.",
-        "default_oltw": "The `oltw` method now uses the built-in in-repo implementation if no override is registered.",
-        "next_step": "Extend the shared OLTW scoring and window helpers to implement OLTW-global.",
+        "default_oltw": "The built-in `oltw` and `oltw_global` methods call PerformanceMatcher.jar by default.",
+        "audio_paths": "The default Java-backed baselines consume audio paths from FeatureSequence.metadata['audio_path'] and ignore feature values.",
     }
 
 
@@ -111,3 +113,7 @@ def _run_registered_baseline(
             f"before benchmarking this method. Candidate package availability: {package_summary}."
         )
     return runner(reference_features, query_features)
+
+
+run_oltw.uses_audio_paths = True
+run_oltw_global.uses_audio_paths = True

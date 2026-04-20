@@ -11,6 +11,7 @@ import pytest
 import soundfile as sf
 
 from scripts import (
+    aggregate_benchmark,
     data_io,
     evaluation,
     features,
@@ -92,34 +93,42 @@ def test_offline_dtw_returns_monotonic_path() -> None:
     assert np.all(np.diff(result.path[:, 1]) >= 0)
 
 
-def test_oltw_returns_monotonic_path() -> None:
+def test_oltw_parses_performance_matcher_output(monkeypatch: pytest.MonkeyPatch) -> None:
     reference = FeatureSequence(
-        values=np.array([[0.0], [1.0], [2.0]], dtype=np.float64),
+        values=np.zeros((3, 1), dtype=np.float64),
         frame_times=np.array([0.0, 0.5, 1.0], dtype=np.float64),
         sample_rate=1,
         hop_length=1,
         feature_name="toy",
-        metadata={"recording_id": "reference"},
+        metadata={"recording_id": "reference", "audio_path": "reference.wav"},
     )
     query = FeatureSequence(
-        values=np.array([[0.0], [1.0], [2.0]], dtype=np.float64),
+        values=np.zeros((3, 1), dtype=np.float64),
         frame_times=np.array([0.0, 0.5, 1.0], dtype=np.float64),
         sample_rate=1,
         hop_length=1,
         feature_name="toy",
-        metadata={"recording_id": "query"},
+        metadata={"recording_id": "query", "audio_path": "query.wav"},
     )
 
-    result = oltw.run_oltw(reference, query, metric="euclidean", search_radius=1)
+    def fake_run(*args: object, **kwargs: object) -> object:
+        class Completed:
+            returncode = 0
+            stdout = "\n".join(["ALIGNMENT: 1, 1", "ALIGNMENT: 2, 2"])
+            stderr = ""
+
+        return Completed()
+
+    monkeypatch.setattr(oltw.subprocess, "run", fake_run)
+    result = oltw.run_oltw(reference, query)
 
     assert result.method_name == "oltw"
     assert tuple(result.path[0]) == (0, 0)
     assert tuple(result.path[-1]) == (2, 2)
     assert np.all(np.diff(result.path[:, 0]) >= 0)
     assert np.all(np.diff(result.path[:, 1]) >= 0)
-    assert result.metadata["processed_query_frames"] == 3
-    assert result.metadata["scoring_mode"] == "cumulative"
-    assert result.metadata["window_policy"] == "adaptive_band"
+    assert result.metadata["backend"] == "PerformanceMatcher.jar"
+    assert result.metadata["use_global_constraint"] is False
 
 
 def test_compute_alignment_metrics_gives_zero_error_for_identity() -> None:
@@ -183,10 +192,28 @@ def test_end_to_end_offline_benchmark_writes_outputs(tmp_path: Path) -> None:
     assert (metrics_frame["mean_abs_error_s"] < 0.05).all()
     assert (output_dir / "synthetic_benchmark_pairs.csv").exists()
     assert (output_dir / "synthetic_benchmark_summary.csv").exists()
+    assert (output_dir / "synthetic_benchmark_beat_errors.csv").exists()
+    assert (output_dir / "synthetic_benchmark_tolerance_curve.csv").exists()
 
 
-def test_run_alignment_benchmark_supports_in_repo_oltw(tmp_path: Path) -> None:
+def test_run_alignment_benchmark_supports_performance_matcher_oltw(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     dataset_root = _build_synthetic_dataset(tmp_path)
+
+    def fake_run(*args: object, **kwargs: object) -> object:
+        class Completed:
+            returncode = 0
+            stdout = "\n".join(
+                f"ALIGNMENT: {index}, {index}"
+                for index in range(1, 90)
+            )
+            stderr = ""
+
+        return Completed()
+
+    monkeypatch.setattr(oltw.subprocess, "run", fake_run)
 
     metrics_frame = evaluation.run_alignment_benchmark(
         dataset_root=dataset_root,
@@ -243,29 +270,47 @@ def test_get_alignment_runner_rejects_unknown_method() -> None:
         evaluation.get_alignment_runner("not_a_method")
 
 
-def test_oltw_global_raises_clear_placeholder_error() -> None:
-    online_baselines.unregister_online_baseline("oltw_global")
-
+def test_oltw_global_passes_global_flag(monkeypatch: pytest.MonkeyPatch) -> None:
     reference = FeatureSequence(
-        values=np.array([[0.0], [1.0]], dtype=np.float64),
+        values=np.zeros((2, 1), dtype=np.float64),
         frame_times=np.array([0.0, 0.5], dtype=np.float64),
         sample_rate=1,
         hop_length=1,
         feature_name="toy",
+        metadata={"audio_path": "reference.wav"},
     )
     query = FeatureSequence(
-        values=np.array([[0.0], [1.0]], dtype=np.float64),
+        values=np.zeros((2, 1), dtype=np.float64),
         frame_times=np.array([0.0, 0.5], dtype=np.float64),
         sample_rate=1,
         hop_length=1,
         feature_name="toy",
+        metadata={"audio_path": "query.wav"},
     )
 
-    with pytest.raises(NotImplementedError, match="OLTW-global is not yet implemented"):
-        online_baselines.run_oltw_global(reference, query)
+    commands: list[list[str]] = []
+
+    def fake_run(command: list[str], *args: object, **kwargs: object) -> object:
+        commands.append(command)
+
+        class Completed:
+            returncode = 0
+            stdout = "ALIGNMENT: 1, 1"
+            stderr = ""
+
+        return Completed()
+
+    monkeypatch.setattr(oltw.subprocess, "run", fake_run)
+    result = online_baselines.run_oltw_global(reference, query)
+
+    assert result.method_name == "oltw_global"
+    assert commands
+    assert "-G" in commands[0]
 
 
-def test_select_recording_pairs_supports_single_small_and_full(tmp_path: Path) -> None:
+def test_select_recording_pairs_supports_single_small_all_pairs_and_paper_test(
+    tmp_path: Path,
+) -> None:
     dataset_root = _build_split_layout_dataset(
         tmp_path,
         piece_specs={
@@ -276,8 +321,13 @@ def test_select_recording_pairs_supports_single_small_and_full(tmp_path: Path) -
     recordings = data_io.discover_recordings(dataset_root)
     pairs = data_io.build_recording_pairs(recordings)
 
-    full_pairs = evaluation.select_recording_pairs(pairs, selection_mode="full")
+    full_pairs = evaluation.select_recording_pairs(pairs, selection_mode="all_pairs")
     small_pairs = evaluation.select_recording_pairs(pairs, selection_mode="small")
+    paper_pairs = evaluation.select_recording_pairs(
+        pairs,
+        selection_mode="paper_test",
+        development_piece="Chopin_Op030No2",
+    )
     single_pair = evaluation.select_recording_pairs(
         pairs,
         selection_mode="single",
@@ -285,6 +335,8 @@ def test_select_recording_pairs_supports_single_small_and_full(tmp_path: Path) -
     )
 
     assert len(full_pairs) == 24
+    assert len(paper_pairs) == 12
+    assert {pair.piece for pair in paper_pairs} == {"Chopin_Op024No2"}
     assert len(small_pairs) == 6
     assert {pair.pair_id for pair in small_pairs} == {
         "Chopin_Op030No2_performance_00__Chopin_Op030No2_performance_01",
@@ -301,12 +353,38 @@ def test_select_recording_pairs_supports_single_small_and_full(tmp_path: Path) -
         evaluation.select_recording_pairs(pairs, selection_mode="single")
 
 
+def test_select_recording_pairs_can_filter_large_warp_factors(tmp_path: Path) -> None:
+    dataset_root = _build_split_layout_dataset(
+        tmp_path,
+        piece_specs={"Chopin_Op030No2": [0.5, 0.6, 1.4]},
+    )
+    pairs = data_io.build_recording_pairs(data_io.discover_recordings(dataset_root))
+
+    filtered_pairs = evaluation.select_recording_pairs(
+        pairs,
+        selection_mode="all_pairs",
+        max_warp_factor=2.0,
+    )
+
+    assert len(filtered_pairs) == 2
+    assert {pair.pair_id for pair in filtered_pairs} == {
+        "Chopin_Op030No2_performance_00__Chopin_Op030No2_performance_01",
+        "Chopin_Op030No2_performance_01__Chopin_Op030No2_performance_00",
+    }
+
+
 def test_run_offline_benchmark_supports_selection_modes(tmp_path: Path) -> None:
-    dataset_root = _build_split_layout_dataset(tmp_path, recording_count=6)
+    dataset_root = _build_split_layout_dataset(
+        tmp_path,
+        piece_specs={
+            "Chopin_Op024No2": [0.7, 0.8, 0.9],
+            "Chopin_Op030No2": [0.3, 0.4, 0.5],
+        },
+    )
     recordings = data_io.discover_recordings(dataset_root)
     pairs = evaluation.select_recording_pairs(
         data_io.build_recording_pairs(recordings),
-        selection_mode="full",
+        selection_mode="all_pairs",
     )
     target_pair_id = pairs[0].pair_id
 
@@ -325,7 +403,14 @@ def test_run_offline_benchmark_supports_selection_modes(tmp_path: Path) -> None:
     )
     full_frame = evaluation.run_offline_benchmark(
         dataset_root=dataset_root,
-        selection_mode="full",
+        selection_mode="all_pairs",
+        save_outputs=False,
+        show_progress=False,
+    )
+    paper_frame = evaluation.run_offline_benchmark(
+        dataset_root=dataset_root,
+        selection_mode="paper_test",
+        development_piece="Chopin_Op030No2",
         save_outputs=False,
         show_progress=False,
     )
@@ -333,7 +418,8 @@ def test_run_offline_benchmark_supports_selection_modes(tmp_path: Path) -> None:
     assert len(single_frame) == 1
     assert single_frame.loc[0, "pair_id"] == target_pair_id
     assert len(small_frame) == 6
-    assert len(full_frame) == 30
+    assert len(full_frame) == 12
+    assert len(paper_frame) == 6
 
 
 def test_select_preview_recording_pair_returns_fastest_small_case(tmp_path: Path) -> None:
@@ -387,6 +473,8 @@ def test_run_benchmark_cli_passes_selection_arguments(
     assert captured["selection_mode"] == "small"
     assert captured["subset_size"] == 10
     assert captured["save_outputs"] is False
+    assert captured["development_piece"] == evaluation.DEFAULT_DEVELOPMENT_PIECE
+    assert len(captured["tolerance_grid"]) > 10
     assert (
         "Completed offline_dtw small benchmark run with 1 benchmark case(s)."
         in capsys.readouterr().out
@@ -405,19 +493,66 @@ def test_visualization_helpers_render(tmp_path: Path) -> None:
     metrics_frame = pd.DataFrame(
         [{"pair_id": "performance_a__performance_b", "mean_abs_error_s": 0.01}]
     )
+    tolerance_frame = pd.DataFrame(
+        [
+            {"method_name": "offline_dtw", "tolerance_s": 0.0, "error_rate": 1.0},
+            {"method_name": "offline_dtw", "tolerance_s": 0.1, "error_rate": 0.2},
+        ]
+    )
 
     alignment_path = tmp_path / "alignment.png"
     summary_path = tmp_path / "summary.png"
+    tolerance_path = tmp_path / "tolerance.png"
     figure_one, _ = visualization.plot_alignment_path(alignment, output_path=alignment_path)
     figure_two, _ = visualization.plot_error_summary(
         metrics_frame,
         output_path=summary_path,
     )
+    figure_three, _ = visualization.plot_tolerance_curve(
+        tolerance_frame,
+        output_path=tolerance_path,
+    )
 
     assert alignment_path.exists()
     assert summary_path.exists()
+    assert tolerance_path.exists()
     figure_one.clf()
     figure_two.clf()
+    figure_three.clf()
+
+
+def test_aggregate_benchmark_cli_writes_curve_and_figure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    beat_errors_path = tmp_path / "oltw_beat_errors.csv"
+    pd.DataFrame(
+        [
+            {"method_name": "oltw", "abs_error_s": 0.05},
+            {"method_name": "oltw", "abs_error_s": 0.10},
+            {"method_name": "offline_dtw", "abs_error_s": 0.02},
+        ]
+    ).to_csv(beat_errors_path, index=False)
+
+    metrics_dir = tmp_path / "metrics"
+    figures_dir = tmp_path / "figures"
+    exit_code = aggregate_benchmark.main(
+        [
+            "--beat-errors",
+            str(beat_errors_path),
+            "--metrics-output-dir",
+            str(metrics_dir),
+            "--figures-output-dir",
+            str(figures_dir),
+            "--experiment-name",
+            "combined",
+        ]
+    )
+
+    assert exit_code == 0
+    assert (metrics_dir / "combined_tolerance_curve.csv").exists()
+    assert (figures_dir / "combined_error_rate_vs_tolerance.png").exists()
+    assert "Aggregated 3 beat-level predictions" in capsys.readouterr().out
 
 
 def _build_synthetic_dataset(tmp_path: Path) -> Path:
