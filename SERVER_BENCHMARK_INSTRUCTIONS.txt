@@ -1,12 +1,13 @@
 Server Benchmark Instructions
 =============================
 
-This project should be run from the repository root, using only the virtual
-environment in this folder.
+This project should be run from the repository root, using the dedicated
+Miniconda environment for this repo.
 
 Assumptions
 -----------
 - The repo is already present on the server.
+- Miniconda is installed in your home directory and can run Python 3.10.10.
 - The dataset is available under `data/raw`.
 - `PerformanceMatcher.jar` is present in the repo root, or you know its
   absolute path.
@@ -15,15 +16,33 @@ Assumptions
 
 Important rule
 --------------
-Do not use `python` directly. Use `./.venv/bin/python` for every command below.
+Do not install project dependencies into the conda `base` environment. Use a
+dedicated environment named `e207-bench`, and prefer `conda run -n e207-bench`
+for every command below.
 
-1. Prepare the server session
+1. Create the project environment
+---------------------------------
+From the repo root:
+
+```bash
+cd /path/to/E207_project
+conda env create -f environment.yml
+```
+
+If the environment already exists, update it instead:
+
+```bash
+conda env update -f environment.yml --prune
+```
+
+2. Prepare the server session
 -----------------------------
 From the repo root:
 
 ```bash
 cd /path/to/E207_project
-./.venv/bin/python --version
+conda run -n e207-bench python --version
+conda run -n e207-bench pytest
 java -version
 test -f PerformanceMatcher.jar && echo "PerformanceMatcher.jar found"
 ```
@@ -34,14 +53,20 @@ Optional: create the output directories up front.
 mkdir -p outputs/metrics outputs/figures outputs/logs
 ```
 
-2. Sanity check with a small run
+Optional: if you want to use the notebook on the server, register the kernel:
+
+```bash
+conda run -n e207-bench python -m ipykernel install --user --name e207-bench --display-name "Python 3.10 (e207-bench)"
+```
+
+3. Sanity check with a small run
 --------------------------------
 Before launching the full benchmark, run one preview job per method.
 
 `offline_dtw` preview:
 
 ```bash
-./.venv/bin/python -m scripts.run_benchmark \
+conda run -n e207-bench python -m scripts.run_benchmark \
   --method offline_dtw \
   --mode small \
   --experiment-name offline_dtw_small_server_check \
@@ -51,7 +76,7 @@ Before launching the full benchmark, run one preview job per method.
 `oltw` preview:
 
 ```bash
-./.venv/bin/python -m scripts.run_benchmark \
+conda run -n e207-bench python -m scripts.run_benchmark \
   --method oltw \
   --mode small \
   --jar-path /absolute/path/to/PerformanceMatcher.jar \
@@ -62,7 +87,7 @@ Before launching the full benchmark, run one preview job per method.
 `oltw_global` preview:
 
 ```bash
-./.venv/bin/python -m scripts.run_benchmark \
+conda run -n e207-bench python -m scripts.run_benchmark \
   --method oltw_global \
   --mode small \
   --jar-path /absolute/path/to/PerformanceMatcher.jar \
@@ -70,7 +95,7 @@ Before launching the full benchmark, run one preview job per method.
   --show-progress
 ```
 
-3. Optional paper-style validation
+4. Optional paper-style validation
 ----------------------------------
 If you want a validation run before the full all-pairs benchmark, use
 `paper_test`. By default, the development piece is `Chopin_Op030No2`.
@@ -78,7 +103,7 @@ If you want a validation run before the full all-pairs benchmark, use
 Example:
 
 ```bash
-./.venv/bin/python -m scripts.run_benchmark \
+conda run -n e207-bench python -m scripts.run_benchmark \
   --method offline_dtw \
   --mode paper_test \
   --development-piece Chopin_Op030No2 \
@@ -92,7 +117,7 @@ If you want to exclude pairs with large duration mismatch, add:
 --exclude-warp-factor-above 2
 ```
 
-4. Launch the full benchmark in tmux
+5. Launch the full benchmark in tmux
 ------------------------------------
 Run each method in its own tmux session so the jobs can continue in the
 background.
@@ -101,7 +126,7 @@ Start the `offline_dtw` session:
 
 ```bash
 tmux new -s dtw_bench
-./.venv/bin/python -m scripts.run_benchmark \
+conda run -n e207-bench python -m scripts.run_benchmark \
   --method offline_dtw \
   --mode all_pairs \
   --experiment-name offline_dtw_all_pairs \
@@ -118,7 +143,7 @@ Start the `oltw` session:
 
 ```bash
 tmux new -s oltw_bench
-./.venv/bin/python -m scripts.run_benchmark \
+conda run -n e207-bench python -m scripts.run_benchmark \
   --method oltw \
   --mode all_pairs \
   --jar-path /absolute/path/to/PerformanceMatcher.jar \
@@ -132,7 +157,7 @@ Start the `oltw_global` session:
 
 ```bash
 tmux new -s oltw_global_bench
-./.venv/bin/python -m scripts.run_benchmark \
+conda run -n e207-bench python -m scripts.run_benchmark \
   --method oltw_global \
   --mode all_pairs \
   --jar-path /absolute/path/to/PerformanceMatcher.jar \
@@ -149,13 +174,13 @@ tmux attach -t oltw_bench
 tmux attach -t oltw_global_bench
 ```
 
-5. Aggregate the error-rate-vs-tolerance figure
+6. Aggregate the error-rate-vs-tolerance figure
 -----------------------------------------------
 After all three runs finish, combine the saved beat-error files into one
 comparison curve and figure.
 
 ```bash
-./.venv/bin/python -m scripts.aggregate_benchmark \
+conda run -n e207-bench python -m scripts.aggregate_benchmark \
   --beat-errors \
   outputs/metrics/offline_dtw_all_pairs_beat_errors.csv \
   outputs/metrics/oltw_all_pairs_beat_errors.csv \
@@ -167,7 +192,7 @@ This writes:
 - `outputs/metrics/mazurka_all_pairs_tolerance_curve.csv`
 - `outputs/figures/mazurka_all_pairs_error_rate_vs_tolerance.png`
 
-6. Files produced by each benchmark run
+7. Files produced by each benchmark run
 ---------------------------------------
 Each `scripts.run_benchmark` run writes these files under `outputs/metrics`
 unless you override `--output-dir`.
@@ -179,7 +204,7 @@ For experiment name `EXPERIMENT_NAME`, expect:
 - `outputs/metrics/EXPERIMENT_NAME_beat_errors.csv`
 - `outputs/metrics/EXPERIMENT_NAME_tolerance_curve.csv`
 
-7. Useful optional flags
+8. Useful optional flags
 ------------------------
 - `--tolerance-max-seconds 1.0`
 - `--tolerance-step-seconds 0.01`
@@ -187,28 +212,29 @@ For experiment name `EXPERIMENT_NAME`, expect:
 - `--exclude-warp-factor-above 2`
 - `--output-dir /path/to/output_metrics_dir`
 
-8. If you need to convert a notebook instead
+9. If you need to convert a notebook instead
 --------------------------------------------
 The benchmark CLI is the preferred server path. If you still want a notebook
 copy for inspection, convert it to a Python script first, but keep the actual
-benchmark commands the same as above and continue using `./.venv/bin/python`.
+benchmark commands the same as above and continue using `conda run -n e207-bench`.
 
-9. Minimal end-to-end command list
-----------------------------------
+10. Minimal end-to-end command list
+-----------------------------------
 If you only want the shortest possible sequence:
 
 ```bash
 cd /path/to/E207_project
+conda env create -f environment.yml
 mkdir -p outputs/metrics outputs/figures outputs/logs
 
 tmux new -s dtw_bench
-./.venv/bin/python -m scripts.run_benchmark --method offline_dtw --mode all_pairs --experiment-name offline_dtw_all_pairs --show-progress 2>&1 | tee outputs/logs/offline_dtw_all_pairs.log
+conda run -n e207-bench python -m scripts.run_benchmark --method offline_dtw --mode all_pairs --experiment-name offline_dtw_all_pairs --show-progress 2>&1 | tee outputs/logs/offline_dtw_all_pairs.log
 
 tmux new -s oltw_bench
-./.venv/bin/python -m scripts.run_benchmark --method oltw --mode all_pairs --jar-path /absolute/path/to/PerformanceMatcher.jar --experiment-name oltw_all_pairs --show-progress 2>&1 | tee outputs/logs/oltw_all_pairs.log
+conda run -n e207-bench python -m scripts.run_benchmark --method oltw --mode all_pairs --jar-path /absolute/path/to/PerformanceMatcher.jar --experiment-name oltw_all_pairs --show-progress 2>&1 | tee outputs/logs/oltw_all_pairs.log
 
 tmux new -s oltw_global_bench
-./.venv/bin/python -m scripts.run_benchmark --method oltw_global --mode all_pairs --jar-path /absolute/path/to/PerformanceMatcher.jar --experiment-name oltw_global_all_pairs --show-progress 2>&1 | tee outputs/logs/oltw_global_all_pairs.log
+conda run -n e207-bench python -m scripts.run_benchmark --method oltw_global --mode all_pairs --jar-path /absolute/path/to/PerformanceMatcher.jar --experiment-name oltw_global_all_pairs --show-progress 2>&1 | tee outputs/logs/oltw_global_all_pairs.log
 
-./.venv/bin/python -m scripts.aggregate_benchmark --beat-errors outputs/metrics/offline_dtw_all_pairs_beat_errors.csv outputs/metrics/oltw_all_pairs_beat_errors.csv outputs/metrics/oltw_global_all_pairs_beat_errors.csv --experiment-name mazurka_all_pairs
+conda run -n e207-bench python -m scripts.aggregate_benchmark --beat-errors outputs/metrics/offline_dtw_all_pairs_beat_errors.csv outputs/metrics/oltw_all_pairs_beat_errors.csv outputs/metrics/oltw_global_all_pairs_beat_errors.csv --experiment-name mazurka_all_pairs
 ```

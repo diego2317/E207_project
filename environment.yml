@@ -1,0 +1,18 @@
+name: e207-bench
+channels:
+  - defaults
+dependencies:
+  - python=3.10.10
+  - pip
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - librosa
+  - soundfile
+  - jupyter
+  - ipykernel
+  - pytest
+  - tqdm
+  - pip:
+      - https://github.com/HMC-MIR/OnlineAlignment/releases/download/v0.1.5/online_alignment-0.1.5-py3-none-any.whl

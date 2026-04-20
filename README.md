@@ -36,11 +36,38 @@ mazurka_op24_no2,performance_b,mazurka_op24_no2/performance_b/audio.wav,mazurka_
 
 ## Getting Started
 
-1. Create a virtual environment.
-2. Install `requirements.txt`.
-3. Place benchmark data under `data/raw/`.
-4. Run `pytest` to verify the pipeline.
-5. Use `notebooks/01_alignment_sandbox.ipynb` for exploratory testing.
+Use a dedicated Miniconda environment for this project. Do not install the
+project dependencies into the conda `base` environment.
+
+1. Create the project environment:
+
+   ```bash
+   conda env create -f environment.yml
+   ```
+
+2. Activate it:
+
+   ```bash
+   conda activate e207-bench
+   ```
+
+3. Verify the interpreter version:
+
+   ```bash
+   python --version
+   ```
+
+   Expected: `Python 3.10.10`
+
+4. Place benchmark data under `data/raw/`.
+5. Run `pytest` to verify the pipeline.
+6. Use `notebooks/01_alignment_sandbox.ipynb` for exploratory testing.
+
+If you need a notebook kernel, register the conda environment explicitly:
+
+```bash
+python -m ipykernel install --user --name e207-bench --display-name "Python 3.10 (e207-bench)"
+```
 
 ## Benchmark Entry Points
 
@@ -54,3 +81,10 @@ mazurka_op24_no2,performance_b,mazurka_op24_no2/performance_b/audio.wav,mazurka_
 - `scripts.online_baselines.register_online_baseline("oltw", runner)` and `register_online_baseline("oltw_global", runner)` override the default online-baseline hooks with external implementations when needed.
 - `oltw_global` is intentionally registered at the interface level but still raises a clear `NotImplementedError` until that variant is implemented.
 - `scripts.visualization.plot_alignment_path(...)` and `scripts.visualization.plot_error_summary(...)` generate diagnostic plots for inspection.
+
+## Server Notes
+
+On older servers, prefer `conda run -n e207-bench ...` for benchmark and test
+commands so they work reliably in `tmux` and other non-interactive shells.
+`oltw` and `oltw_global` also require Java on `PATH` plus `PerformanceMatcher.jar`
+in the repo root or passed explicitly via `--jar-path`.
