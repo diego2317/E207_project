@@ -22,6 +22,7 @@ from scripts import (
     run_benchmark,
     visualization,
 )
+from scripts.config import DEFAULT_SAMPLE_RATE, RAW_DATA_DIR
 from scripts.models import AlignmentResult, FeatureSequence
 
 
@@ -111,6 +112,122 @@ def test_offline_dtw_accumulation_matches_reference_kernel() -> None:
     np.testing.assert_array_equal(actual_backpointers, expected_backpointers)
 
 
+@pytest.mark.parametrize("metric", ["euclidean", "cosine"])
+def test_offline_dtw_metric_kernel_matches_reference_oracle(metric: str) -> None:
+    reference_values = np.array(
+        [
+            [1.0, 0.5, 0.25],
+            [0.25, 1.0, 0.75],
+            [0.75, 0.5, 1.0],
+            [1.0, 0.75, 0.5],
+        ],
+        dtype=np.float64,
+    )
+    query_values = np.array(
+        [
+            [1.0, 0.25, 0.5],
+            [0.5, 1.0, 0.75],
+            [0.75, 0.75, 1.0],
+        ],
+        dtype=np.float64,
+    )
+
+    expected_local_cost = offline_dtw._compute_local_cost_reference(
+        reference_values,
+        query_values,
+        metric=metric,
+    )
+    expected_cost, expected_backpointers = offline_dtw._accumulate_cost_reference(
+        expected_local_cost,
+    )
+    actual_cost, actual_backpointers = offline_dtw._accumulate_cost_by_metric(
+        reference_values,
+        query_values,
+        metric=metric,
+    )
+
+    assert actual_cost == pytest.approx(expected_cost)
+    np.testing.assert_array_equal(actual_backpointers, expected_backpointers)
+
+
+def test_offline_dtw_optimized_cosine_local_cost_matches_reference() -> None:
+    reference_values = np.array(
+        [
+            [1.0, 0.5, 0.25],
+            [0.25, 1.0, 0.75],
+            [0.75, 0.5, 1.0],
+            [1.0, 0.75, 0.5],
+        ],
+        dtype=np.float64,
+    )
+    query_values = np.array(
+        [
+            [1.0, 0.25, 0.5],
+            [0.5, 1.0, 0.75],
+            [0.75, 0.75, 1.0],
+        ],
+        dtype=np.float64,
+    )
+
+    expected_local_cost = offline_dtw._compute_local_cost_reference(
+        reference_values,
+        query_values,
+        metric="cosine",
+    )
+    actual_local_cost = offline_dtw._compute_cosine_local_cost_optimized(
+        reference_values,
+        query_values,
+    )
+
+    np.testing.assert_array_equal(
+        np.isnan(actual_local_cost),
+        np.isnan(expected_local_cost),
+    )
+    np.testing.assert_allclose(actual_local_cost, expected_local_cost)
+
+
+def test_offline_dtw_cosine_kernel_matches_reference_with_zero_vectors() -> None:
+    reference_values = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 1.0],
+        ],
+        dtype=np.float64,
+    )
+    query_values = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [0.0, 1.0],
+        ],
+        dtype=np.float64,
+    )
+
+    expected_local_cost = offline_dtw._compute_local_cost_reference(
+        reference_values,
+        query_values,
+        metric="cosine",
+    )
+    expected_cost, expected_backpointers = offline_dtw._accumulate_cost_reference(
+        expected_local_cost,
+    )
+    actual_cost, actual_backpointers = offline_dtw._accumulate_cost_by_metric(
+        reference_values,
+        query_values,
+        metric="cosine",
+    )
+    actual_local_cost = offline_dtw._compute_cosine_local_cost_optimized(
+        reference_values,
+        query_values,
+    )
+
+    assert np.isnan(actual_cost)
+    assert np.isnan(expected_cost)
+    np.testing.assert_array_equal(np.isnan(actual_local_cost), np.isnan(expected_local_cost))
+    np.testing.assert_array_equal(actual_backpointers, expected_backpointers)
+
+
 def test_offline_dtw_prefers_diagonal_on_zero_cost_ties() -> None:
     reference = FeatureSequence(
         values=np.zeros((3, 1), dtype=np.float64),
@@ -135,9 +252,10 @@ def test_offline_dtw_prefers_diagonal_on_zero_cost_ties() -> None:
     )
 
 
-def test_offline_dtw_accepts_noncontiguous_float32_features() -> None:
-    reference_values = np.arange(6, dtype=np.float32).reshape(3, 2)[:, :1]
-    query_values = np.arange(6, dtype=np.float32).reshape(3, 2)[:, :1]
+@pytest.mark.parametrize("metric", ["euclidean", "cosine"])
+def test_offline_dtw_accepts_noncontiguous_float32_features(metric: str) -> None:
+    reference_values = np.arange(1, 7, dtype=np.float32).reshape(3, 2)[:, :1]
+    query_values = np.arange(1, 7, dtype=np.float32).reshape(3, 2)[:, :1]
     assert not reference_values.flags["C_CONTIGUOUS"]
     assert not query_values.flags["C_CONTIGUOUS"]
 
@@ -156,13 +274,104 @@ def test_offline_dtw_accepts_noncontiguous_float32_features() -> None:
         feature_name="toy",
     )
 
-    result = offline_dtw.run_offline_dtw(reference, query, metric="euclidean")
+    result = offline_dtw.run_offline_dtw(reference, query, metric=metric)
 
     np.testing.assert_array_equal(
         result.path,
         np.array([[0, 0], [1, 1], [2, 2]], dtype=np.int64),
     )
     assert result.metadata["total_cost"] == pytest.approx(0.0)
+
+
+@pytest.mark.parametrize("metric", ["euclidean", "cosine"])
+def test_offline_dtw_optimized_runner_matches_reference_path(metric: str) -> None:
+    reference = FeatureSequence(
+        values=np.array(
+            [
+                [1.0, 0.5, 0.25],
+                [0.25, 1.0, 0.75],
+                [0.75, 0.5, 1.0],
+                [1.0, 0.75, 0.5],
+            ],
+            dtype=np.float64,
+        ),
+        frame_times=np.array([0.0, 0.25, 0.5, 0.75], dtype=np.float64),
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+        metadata={"recording_id": "reference"},
+    )
+    query = FeatureSequence(
+        values=np.array(
+            [
+                [1.0, 0.25, 0.5],
+                [0.5, 1.0, 0.75],
+                [0.75, 0.75, 1.0],
+            ],
+            dtype=np.float64,
+        ),
+        frame_times=np.array([0.0, 0.4, 0.8], dtype=np.float64),
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+        metadata={"recording_id": "query"},
+    )
+
+    actual_result = offline_dtw.run_offline_dtw(reference, query, metric=metric)
+    expected_total_cost, expected_path = offline_dtw._run_offline_dtw_reference(
+        offline_dtw._prepare_feature_values(reference.values),
+        offline_dtw._prepare_feature_values(query.values),
+        metric=metric,
+    )
+
+    assert actual_result.metadata["total_cost"] == pytest.approx(expected_total_cost)
+    np.testing.assert_array_equal(actual_result.path, expected_path)
+    np.testing.assert_allclose(
+        actual_result.reference_times,
+        reference.frame_times[expected_path[:, 0]],
+    )
+    np.testing.assert_allclose(
+        actual_result.query_times,
+        query.frame_times[expected_path[:, 1]],
+    )
+
+
+def test_offline_dtw_optimized_matches_reference_on_real_benchmark_pair() -> None:
+    reference_id = "Chopin_Op030No2_Ashkenazy-1981_pid9058-19"
+    query_id = "Chopin_Op030No2_Sofronitsky-1960_pid5667291-15"
+    recordings = data_io.discover_recordings(RAW_DATA_DIR)
+    recording_index = {recording.recording_id: recording for recording in recordings}
+    if reference_id not in recording_index or query_id not in recording_index:
+        pytest.skip("Real benchmark pair is not available in the local dataset.")
+
+    reference_recording = recording_index[reference_id]
+    query_recording = recording_index[query_id]
+    reference_audio, reference_sr = data_io.load_audio(
+        reference_recording.audio_path,
+        sample_rate=DEFAULT_SAMPLE_RATE,
+    )
+    query_audio, query_sr = data_io.load_audio(
+        query_recording.audio_path,
+        sample_rate=DEFAULT_SAMPLE_RATE,
+    )
+    reference_features = features.compute_features(reference_audio, sr=reference_sr)
+    query_features = features.compute_features(query_audio, sr=query_sr)
+    reference_features.metadata["recording_id"] = reference_id
+    query_features.metadata["recording_id"] = query_id
+
+    actual_result = offline_dtw.run_offline_dtw(
+        reference_features,
+        query_features,
+        metric="cosine",
+    )
+    expected_total_cost, expected_path = offline_dtw._run_offline_dtw_reference(
+        offline_dtw._prepare_feature_values(reference_features.values),
+        offline_dtw._prepare_feature_values(query_features.values),
+        metric="cosine",
+    )
+
+    assert actual_result.metadata["total_cost"] == pytest.approx(expected_total_cost)
+    np.testing.assert_array_equal(actual_result.path, expected_path)
 
 
 def test_oltw_parses_performance_matcher_output(monkeypatch: pytest.MonkeyPatch) -> None:
