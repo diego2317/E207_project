@@ -32,6 +32,7 @@ _ALIGNMENT_RUNNERS: dict[str, AlignmentRunner] = {
     DEFAULT_METHOD_NAME: offline_dtw.run_offline_dtw,
     "oltw": online_baselines.run_oltw,
     "oltw_global": online_baselines.run_oltw_global,
+    "kalman_oltw": online_baselines.run_kalman_oltw,
 }
 
 

@@ -83,14 +83,31 @@ def run_oltw_global(
     return oltw.run_oltw_global(reference_features, query_features, **runner_kwargs)
 
 
+def run_kalman_oltw(
+    reference_features: FeatureSequence,
+    query_features: FeatureSequence,
+    **runner_kwargs: object,
+) -> AlignmentResult:
+    """Run the Kalman-smoothed online alignment prototype."""
+
+    runner = _REGISTERED_BASELINES.get("kalman_oltw")
+    if runner is not None:
+        return runner(reference_features, query_features, **runner_kwargs)
+
+    from scripts import kalman_online
+
+    return kalman_online.run_kalman_oltw(reference_features, query_features, **runner_kwargs)
+
+
 def get_adapter_notes() -> dict[str, str]:
     """Describe the common interface expected from online baseline adapters."""
 
     return {
         "input": "FeatureSequence for reference and query.",
         "output": "AlignmentResult with monotonic time mapping and method metadata.",
-        "registration": "Call register_online_baseline('oltw', runner) or register_online_baseline('oltw_global', runner) to override the defaults.",
+        "registration": "Call register_online_baseline('oltw', runner), register_online_baseline('oltw_global', runner), or register_online_baseline('kalman_oltw', runner) to override the defaults.",
         "default_oltw": "The built-in `oltw` and `oltw_global` methods call PerformanceMatcher.jar by default.",
+        "default_kalman_oltw": "The built-in `kalman_oltw` method uses PerformanceMatcher.jar as a measurement source and smooths it with a Kalman filter.",
         "audio_paths": "The default Java-backed baselines consume audio paths from FeatureSequence.metadata['audio_path'] and ignore feature values.",
     }
 
@@ -117,3 +134,4 @@ def _run_registered_baseline(
 
 run_oltw.uses_audio_paths = True
 run_oltw_global.uses_audio_paths = True
+run_kalman_oltw.uses_audio_paths = True

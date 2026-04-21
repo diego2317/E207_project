@@ -16,6 +16,7 @@ from scripts import (
     data_io,
     evaluation,
     features,
+    kalman_online,
     metrics,
     offline_dtw,
     oltw,
@@ -552,6 +553,123 @@ def test_run_alignment_benchmark_supports_performance_matcher_oltw(
 
     assert len(metrics_frame) == 2
     assert set(metrics_frame["method_name"]) == {"oltw"}
+    assert (metrics_frame["mean_abs_error_s"] < 0.05).all()
+
+
+def test_kalman_online_builds_measurement_track() -> None:
+    raw_alignment = np.array(
+        [
+            [1, 1],
+            [1, 2],
+            [3, 4],
+        ],
+        dtype=np.int64,
+    )
+
+    measurements = kalman_online._build_measurement_track(
+        raw_alignment=raw_alignment,
+        num_reference_frames=8,
+        num_query_frames=5,
+    )
+
+    expected = np.array([0.0, 2.0, np.nan, 4.0, np.nan], dtype=np.float64)
+    np.testing.assert_array_equal(np.isnan(measurements), np.isnan(expected))
+    np.testing.assert_allclose(
+        measurements[~np.isnan(expected)],
+        expected[~np.isnan(expected)],
+    )
+
+
+def test_kalman_online_filter_enforces_monotone_positions() -> None:
+    states, observed_mask = kalman_online._run_constant_velocity_kalman(
+        measurements=np.array([0.0, 2.0, np.nan, 1.0, 4.0], dtype=np.float64),
+        num_reference_frames=6,
+        initial_velocity=1.0,
+        config=kalman_online.KalmanFilterConfig(),
+    )
+
+    assert states.shape == (5, 2)
+    assert observed_mask.tolist() == [True, True, False, True, True]
+    assert np.all(np.diff(states[:, 0]) >= 0.0)
+    assert np.all(states[:, 1] >= 0.25)
+    assert np.all(states[:, 1] <= 4.0)
+
+
+def test_kalman_online_runner_records_prototype_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    reference = FeatureSequence(
+        values=np.zeros((6, 1), dtype=np.float64),
+        frame_times=np.arange(6, dtype=np.float64) * 0.5,
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+        metadata={"audio_path": "reference.wav", "recording_id": "reference"},
+    )
+    query = FeatureSequence(
+        values=np.zeros((6, 1), dtype=np.float64),
+        frame_times=np.arange(6, dtype=np.float64) * 0.5,
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+        metadata={"audio_path": "query.wav", "recording_id": "query"},
+    )
+
+    def fake_run(*args: object, **kwargs: object) -> object:
+        class Completed:
+            returncode = 0
+            stdout = "\n".join(
+                [
+                    "ALIGNMENT: 1, 1",
+                    "ALIGNMENT: 2, 2",
+                    "ALIGNMENT: 3, 3",
+                ]
+            )
+            stderr = ""
+
+        return Completed()
+
+    monkeypatch.setattr(kalman_online.subprocess, "run", fake_run)
+    result = kalman_online.run_kalman_oltw(
+        reference,
+        query,
+        jar_path=Path("PerformanceMatcher.jar"),
+    )
+
+    assert result.method_name == "kalman_oltw"
+    assert result.metadata["backend"] == "PerformanceMatcher.jar"
+    assert result.metadata["measurement_source"] == "alignment_frontier"
+    assert result.metadata["spec_faithful"] is False
+
+
+def test_run_alignment_benchmark_supports_kalman_oltw(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    dataset_root = _build_synthetic_dataset(tmp_path)
+
+    def fake_run(*args: object, **kwargs: object) -> object:
+        class Completed:
+            returncode = 0
+            stdout = "\n".join(
+                f"ALIGNMENT: {index}, {index}"
+                for index in range(1, 90)
+            )
+            stderr = ""
+
+        return Completed()
+
+    monkeypatch.setattr(kalman_online.subprocess, "run", fake_run)
+
+    metrics_frame = evaluation.run_alignment_benchmark(
+        dataset_root=dataset_root,
+        method_name="kalman_oltw",
+        save_outputs=False,
+        show_progress=False,
+    )
+
+    assert len(metrics_frame) == 2
+    assert set(metrics_frame["method_name"]) == {"kalman_oltw"}
     assert (metrics_frame["mean_abs_error_s"] < 0.05).all()
 
 

@@ -96,7 +96,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--jar-path",
         type=Path,
         default=oltw_backend.DEFAULT_JAR_PATH,
-        help="Path to PerformanceMatcher.jar for the oltw baselines.",
+        help="Path to PerformanceMatcher.jar for the Java-backed online baselines.",
     )
     parser.add_argument(
         "--tolerance-max-seconds",
@@ -128,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     runner_kwargs: dict[str, object] | None = None
-    if args.method in {"oltw", "oltw_global"}:
+    if args.method in {"oltw", "oltw_global", "kalman_oltw"}:
         runner_kwargs = {"jar_path": args.jar_path}
 
     tolerance_grid = metrics.build_tolerance_grid(
