@@ -55,7 +55,7 @@ def compute_features(
     )
 
     return FeatureSequence(
-        values=np.asarray(feature_matrix.T, dtype=np.float64),
+        values=np.ascontiguousarray(feature_matrix.T, dtype=np.float32),
         frame_times=np.asarray(frame_times, dtype=np.float64),
         sample_rate=int(sr),
         hop_length=hop_length,

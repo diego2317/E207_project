@@ -91,6 +91,78 @@ def test_offline_dtw_returns_monotonic_path() -> None:
     assert tuple(result.path[-1]) == (2, 2)
     assert np.all(np.diff(result.path[:, 0]) >= 0)
     assert np.all(np.diff(result.path[:, 1]) >= 0)
+    assert result.metadata["total_cost"] == pytest.approx(0.0)
+
+
+def test_offline_dtw_accumulation_matches_reference_kernel() -> None:
+    local_cost = np.array(
+        [
+            [0.5, 1.0, 0.5],
+            [0.5, 0.25, 1.5],
+            [1.0, 0.25, 0.25],
+        ],
+        dtype=np.float64,
+    )
+
+    expected_cost, expected_backpointers = offline_dtw._accumulate_cost_reference(local_cost)
+    actual_cost, actual_backpointers = offline_dtw._accumulate_cost(local_cost)
+
+    assert actual_cost == pytest.approx(expected_cost)
+    np.testing.assert_array_equal(actual_backpointers, expected_backpointers)
+
+
+def test_offline_dtw_prefers_diagonal_on_zero_cost_ties() -> None:
+    reference = FeatureSequence(
+        values=np.zeros((3, 1), dtype=np.float64),
+        frame_times=np.array([0.0, 0.5, 1.0], dtype=np.float64),
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+    )
+    query = FeatureSequence(
+        values=np.zeros((3, 1), dtype=np.float64),
+        frame_times=np.array([0.0, 0.5, 1.0], dtype=np.float64),
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+    )
+
+    result = offline_dtw.run_offline_dtw(reference, query, metric="euclidean")
+
+    np.testing.assert_array_equal(
+        result.path,
+        np.array([[0, 0], [1, 1], [2, 2]], dtype=np.int64),
+    )
+
+
+def test_offline_dtw_accepts_noncontiguous_float32_features() -> None:
+    reference_values = np.arange(6, dtype=np.float32).reshape(3, 2)[:, :1]
+    query_values = np.arange(6, dtype=np.float32).reshape(3, 2)[:, :1]
+    assert not reference_values.flags["C_CONTIGUOUS"]
+    assert not query_values.flags["C_CONTIGUOUS"]
+
+    reference = FeatureSequence(
+        values=reference_values,
+        frame_times=np.array([0.0, 0.5, 1.0], dtype=np.float64),
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+    )
+    query = FeatureSequence(
+        values=query_values,
+        frame_times=np.array([0.0, 0.5, 1.0], dtype=np.float64),
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+    )
+
+    result = offline_dtw.run_offline_dtw(reference, query, metric="euclidean")
+
+    np.testing.assert_array_equal(
+        result.path,
+        np.array([[0, 0], [1, 1], [2, 2]], dtype=np.int64),
+    )
+    assert result.metadata["total_cost"] == pytest.approx(0.0)
 
 
 def test_oltw_parses_performance_matcher_output(monkeypatch: pytest.MonkeyPatch) -> None:

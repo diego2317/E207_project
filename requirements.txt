@@ -17,6 +17,7 @@ ipykernel
 # Testing and utility
 pytest
 tqdm
+numba
 
 # oltw
 https://github.com/HMC-MIR/OnlineAlignment/releases/download/v0.1.5/online_alignment-0.1.5-py3-none-any.whl
