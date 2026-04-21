@@ -9,6 +9,13 @@ from scripts import evaluation, metrics, oltw as oltw_backend
 from scripts.config import DEFAULT_SAMPLE_RATE, METRICS_DIR, RAW_DATA_DIR
 
 
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("value must be a positive integer")
+    return parsed
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -19,12 +26,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--mode",
-        choices=("single", "small", "full", "all_pairs", "paper_test", "paper_half"),
+        choices=("single", "small", "full", "all_pairs", "paper_test"),
         default="all_pairs",
         help=(
             "Select one directed benchmark case, a fixed 3-recording preview set, "
-            "all directed pairs, the paper-style held-out test subset, or a "
-            "piece-balanced half of that held-out subset."
+            "all directed pairs, or the paper-style held-out test subset."
         ),
     )
     parser.add_argument(
@@ -37,6 +43,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=10,
         help="Legacy option retained for compatibility; small mode now runs a fixed 3-recording preview set.",
+    )
+    parser.add_argument(
+        "--max-pairs",
+        type=_positive_int,
+        default=None,
+        help="When --mode=paper_test, optionally limit the number of held-out directed cases.",
     )
     parser.add_argument(
         "--dataset-root",
@@ -69,7 +81,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--development-piece",
         default=evaluation.DEFAULT_DEVELOPMENT_PIECE,
-        help="Piece reserved for development when --mode=paper_test or --mode=paper_half.",
+        help="Piece reserved for development when --mode=paper_test.",
     )
     parser.add_argument(
         "--exclude-warp-factor-above",
@@ -135,6 +147,7 @@ def main(argv: list[str] | None = None) -> int:
         selection_mode=args.mode,
         pair_id=args.pair_id,
         subset_size=args.subset_size,
+        max_pairs=args.max_pairs,
         runner_kwargs=runner_kwargs,
         tolerance_grid=tolerance_grid,
         development_piece=args.development_piece,
@@ -158,8 +171,6 @@ def _default_experiment_name(method_name: str, mode: str, pair_id: str | None) -
         return f"{method_name}_all_pairs"
     if mode == "paper_test":
         return f"{method_name}_paper_test"
-    if mode == "paper_half":
-        return f"{method_name}_paper_half"
     return f"{method_name}_benchmark"
 
 

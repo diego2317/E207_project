@@ -23,7 +23,6 @@ BenchmarkSelectionMode = Literal[
     "full",
     "all_pairs",
     "paper_test",
-    "paper_half",
 ]
 SMALL_BENCHMARK_RECORDING_COUNT = 3
 DEFAULT_METHOD_NAME = "offline_dtw"
@@ -197,10 +196,17 @@ def select_recording_pairs(
     selection_mode: BenchmarkSelectionMode = "all_pairs",
     pair_id: str | None = None,
     subset_size: int = 10,
+    max_pairs: int | None = None,
     development_piece: str = DEFAULT_DEVELOPMENT_PIECE,
     max_warp_factor: float | None = None,
 ) -> list[RecordingPair]:
     """Select benchmark cases for a given benchmark mode."""
+
+    if max_pairs is not None:
+        if max_pairs <= 0:
+            raise ValueError("max_pairs must be positive when provided.")
+        if selection_mode != "paper_test":
+            raise ValueError("max_pairs is only supported when selection_mode='paper_test'.")
 
     ordered_pairs = sorted(pairs, key=lambda item: (item.piece, item.pair_id))
     if selection_mode in {"full", "all_pairs"}:
@@ -209,13 +215,6 @@ def select_recording_pairs(
         selected_pairs = _select_paper_test_benchmark_pairs(
             ordered_pairs,
             development_piece=development_piece,
-        )
-    elif selection_mode == "paper_half":
-        selected_pairs = _select_half_benchmark_pairs(
-            _select_paper_test_benchmark_pairs(
-                ordered_pairs,
-                development_piece=development_piece,
-            )
         )
     elif selection_mode == "small":
         selected_pairs = _select_small_benchmark_pairs(ordered_pairs)
@@ -237,6 +236,8 @@ def select_recording_pairs(
             for pair in selected_pairs
             if estimate_average_warping_factor(pair) <= max_warp_factor
         ]
+    if max_pairs is not None:
+        selected_pairs = selected_pairs[:max_pairs]
     if not selected_pairs:
         raise ValueError(
             f"No benchmark pairs remained after applying selection_mode={selection_mode!r}."
@@ -262,6 +263,7 @@ def run_alignment_benchmark(
     selection_mode: BenchmarkSelectionMode = "all_pairs",
     pair_id: str | None = None,
     subset_size: int = 10,
+    max_pairs: int | None = None,
     runner_kwargs: dict[str, object] | None = None,
     metric_tolerances: Iterable[float] = metrics.DEFAULT_TOLERANCES,
     tolerance_grid: Iterable[float] | None = None,
@@ -279,6 +281,7 @@ def run_alignment_benchmark(
         selection_mode=selection_mode,
         pair_id=pair_id,
         subset_size=subset_size,
+        max_pairs=max_pairs,
         development_piece=development_piece,
         max_warp_factor=max_warp_factor,
     )
@@ -307,6 +310,7 @@ def run_offline_benchmark(
     selection_mode: BenchmarkSelectionMode = "all_pairs",
     pair_id: str | None = None,
     subset_size: int = 10,
+    max_pairs: int | None = None,
     metric_tolerances: Iterable[float] = metrics.DEFAULT_TOLERANCES,
     tolerance_grid: Iterable[float] | None = None,
     development_piece: str = DEFAULT_DEVELOPMENT_PIECE,
@@ -326,6 +330,7 @@ def run_offline_benchmark(
         selection_mode=selection_mode,
         pair_id=pair_id,
         subset_size=subset_size,
+        max_pairs=max_pairs,
         metric_tolerances=metric_tolerances,
         tolerance_grid=tolerance_grid,
         development_piece=development_piece,
@@ -398,18 +403,6 @@ def _select_paper_test_benchmark_pairs(
     development_piece: str,
 ) -> list[RecordingPair]:
     return [pair for pair in pairs if pair.piece != development_piece]
-
-
-def _select_half_benchmark_pairs(pairs: list[RecordingPair]) -> list[RecordingPair]:
-    grouped_pairs: dict[str, list[RecordingPair]] = {}
-    for pair in pairs:
-        grouped_pairs.setdefault(pair.piece, []).append(pair)
-
-    selected_pairs: list[RecordingPair] = []
-    for piece in sorted(grouped_pairs):
-        piece_pairs = grouped_pairs[piece]
-        selected_pairs.extend(piece_pairs[: len(piece_pairs) // 2])
-    return selected_pairs
 
 
 def _collect_recordings_by_piece(pairs: list[RecordingPair]) -> dict[str, list[Recording]]:
