@@ -27,6 +27,7 @@ BenchmarkSelectionMode = Literal[
 SMALL_BENCHMARK_RECORDING_COUNT = 3
 DEFAULT_METHOD_NAME = "offline_dtw"
 DEFAULT_DEVELOPMENT_PIECE = "Chopin_Op030No2"
+DEFAULT_MAX_WARP_FACTOR = 2.0
 _ALIGNMENT_RUNNERS: dict[str, AlignmentRunner] = {
     DEFAULT_METHOD_NAME: offline_dtw.run_offline_dtw,
     "oltw": online_baselines.run_oltw,
@@ -198,7 +199,7 @@ def select_recording_pairs(
     subset_size: int = 10,
     max_pairs: int | None = None,
     development_piece: str = DEFAULT_DEVELOPMENT_PIECE,
-    max_warp_factor: float | None = None,
+    max_warp_factor: float | None = DEFAULT_MAX_WARP_FACTOR,
 ) -> list[RecordingPair]:
     """Select benchmark cases for a given benchmark mode."""
 
@@ -268,7 +269,7 @@ def run_alignment_benchmark(
     metric_tolerances: Iterable[float] = metrics.DEFAULT_TOLERANCES,
     tolerance_grid: Iterable[float] | None = None,
     development_piece: str = DEFAULT_DEVELOPMENT_PIECE,
-    max_warp_factor: float | None = None,
+    max_warp_factor: float | None = DEFAULT_MAX_WARP_FACTOR,
     save_outputs: bool = True,
     show_progress: bool = False,
 ) -> pd.DataFrame:
@@ -314,7 +315,7 @@ def run_offline_benchmark(
     metric_tolerances: Iterable[float] = metrics.DEFAULT_TOLERANCES,
     tolerance_grid: Iterable[float] | None = None,
     development_piece: str = DEFAULT_DEVELOPMENT_PIECE,
-    max_warp_factor: float | None = None,
+    max_warp_factor: float | None = DEFAULT_MAX_WARP_FACTOR,
     save_outputs: bool = True,
     show_progress: bool = False,
 ) -> pd.DataFrame:

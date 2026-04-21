@@ -86,8 +86,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--exclude-warp-factor-above",
         type=float,
-        default=None,
-        help="Optionally exclude pairs whose duration ratio exceeds this threshold.",
+        default=evaluation.DEFAULT_MAX_WARP_FACTOR,
+        help=(
+            "Exclude pairs whose duration ratio exceeds this threshold. "
+            f"Defaults to {evaluation.DEFAULT_MAX_WARP_FACTOR}."
+        ),
     )
     parser.add_argument(
         "--jar-path",

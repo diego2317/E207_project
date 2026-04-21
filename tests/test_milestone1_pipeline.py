@@ -223,8 +223,10 @@ def test_offline_dtw_cosine_kernel_matches_reference_with_zero_vectors() -> None
         query_values,
     )
 
-    assert np.isnan(actual_cost)
-    assert np.isnan(expected_cost)
+    if np.isnan(expected_cost):
+        assert np.isnan(actual_cost)
+    else:
+        assert actual_cost == expected_cost
     np.testing.assert_array_equal(np.isnan(actual_local_cost), np.isnan(expected_local_cost))
     np.testing.assert_array_equal(actual_backpointers, expected_backpointers)
 
@@ -251,6 +253,50 @@ def test_offline_dtw_prefers_diagonal_on_zero_cost_ties() -> None:
         result.path,
         np.array([[0, 0], [1, 1], [2, 2]], dtype=np.int64),
     )
+
+
+def test_offline_dtw_supports_paper_query_double_transition() -> None:
+    reference = FeatureSequence(
+        values=np.array([[0.0], [1.0]], dtype=np.float64),
+        frame_times=np.array([0.0, 1.0], dtype=np.float64),
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+    )
+    query = FeatureSequence(
+        values=np.array([[0.0], [0.5], [1.0]], dtype=np.float64),
+        frame_times=np.array([0.0, 0.5, 1.0], dtype=np.float64),
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+    )
+
+    result = offline_dtw.run_offline_dtw(reference, query, metric="euclidean")
+
+    np.testing.assert_array_equal(
+        result.path,
+        np.array([[0, 0], [1, 2]], dtype=np.int64),
+    )
+
+
+def test_offline_dtw_rejects_pairs_without_valid_paper_step_path() -> None:
+    reference = FeatureSequence(
+        values=np.array([[0.0], [1.0]], dtype=np.float64),
+        frame_times=np.array([0.0, 1.0], dtype=np.float64),
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+    )
+    query = FeatureSequence(
+        values=np.array([[0.0], [0.5], [1.0], [1.5]], dtype=np.float64),
+        frame_times=np.array([0.0, 0.5, 1.0, 1.5], dtype=np.float64),
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+    )
+
+    with pytest.raises(ValueError, match="No valid DTW alignment path"):
+        offline_dtw.run_offline_dtw(reference, query, metric="euclidean")
 
 
 @pytest.mark.parametrize("metric", ["euclidean", "cosine"])
@@ -617,7 +663,7 @@ def test_select_recording_pairs_supports_single_small_all_pairs_and_paper_test(
         pair_id=full_pairs[0].pair_id,
     )
 
-    assert len(full_pairs) == 36
+    assert len(full_pairs) == 30
     assert len(paper_pairs) == 24
     assert Counter(pair.piece for pair in paper_pairs) == {
         "Chopin_Op017No4": 12,
@@ -650,6 +696,25 @@ def test_select_recording_pairs_can_filter_large_warp_factors(tmp_path: Path) ->
         pairs,
         selection_mode="all_pairs",
         max_warp_factor=2.0,
+    )
+
+    assert len(filtered_pairs) == 2
+    assert {pair.pair_id for pair in filtered_pairs} == {
+        "Chopin_Op030No2_performance_00__Chopin_Op030No2_performance_01",
+        "Chopin_Op030No2_performance_01__Chopin_Op030No2_performance_00",
+    }
+
+
+def test_select_recording_pairs_filters_large_warp_factors_by_default(tmp_path: Path) -> None:
+    dataset_root = _build_split_layout_dataset(
+        tmp_path,
+        piece_specs={"Chopin_Op030No2": [0.5, 0.6, 1.4]},
+    )
+    pairs = data_io.build_recording_pairs(data_io.discover_recordings(dataset_root))
+
+    filtered_pairs = evaluation.select_recording_pairs(
+        pairs,
+        selection_mode="all_pairs",
     )
 
     assert len(filtered_pairs) == 2
@@ -816,6 +881,7 @@ def test_run_benchmark_cli_passes_selection_arguments(
     assert captured["max_pairs"] == 5
     assert captured["save_outputs"] is False
     assert captured["development_piece"] == evaluation.DEFAULT_DEVELOPMENT_PIECE
+    assert captured["max_warp_factor"] == evaluation.DEFAULT_MAX_WARP_FACTOR
     assert len(captured["tolerance_grid"]) > 10
     assert (
         "Completed offline_dtw paper_test benchmark run with 1 benchmark case(s)."
