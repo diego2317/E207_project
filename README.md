@@ -79,12 +79,12 @@ python -m ipykernel install --user --name e207-bench --display-name "Python 3.10
 - `python -m scripts.run_benchmark --method offline_dtw --mode full` runs the full directed benchmark set.
 - `python -m scripts.run_benchmark --method offline_dtw --mode paper_test --max-pairs 1000` runs the held-out `paper_test` subset but stops after the first 1000 selected directed cases.
 - `python -m scripts.run_benchmark --method oltw --mode small` runs the default `PerformanceMatcher.jar`-backed OLTW baseline.
-- `python -m scripts.run_benchmark --method kalman_oltw --mode small` runs the first-pass Kalman-smoothed online prototype using `PerformanceMatcher.jar` as its measurement source.
+- `python -m scripts.run_benchmark --method kalman_oltw --mode small` runs the native Kalman-guided streaming normalized online-DTW prototype.
 - Benchmark selection now excludes pairs with average warp factor above `2.0` by default to match the paper-style constraint. Override with `--exclude-warp-factor-above`.
 - `--max-pairs` is only supported with `--mode paper_test`.
 - `scripts.online_baselines.register_online_baseline("oltw", runner)` and `register_online_baseline("oltw_global", runner)` override the default Java-backed hooks with external implementations when needed.
 - `oltw` and `oltw_global` both default to invoking `PerformanceMatcher.jar`; any future `OnlineAlignment` integration should be registered explicitly through `scripts.online_baselines`.
-- `kalman_oltw` is intentionally a prototype: it smooths the JAR's online alignment frontier with a constant-velocity Kalman filter, and it does not yet implement the normalized streaming subsequence-DTW objective described for milestone 2.
+- `kalman_oltw` is now a native Python prototype: it computes normalized cumulative online-DTW row by row, extracts a causal measurement from each row, and uses a constant-velocity Kalman filter to guide the next search region.
 - `scripts.visualization.plot_alignment_path(...)` and `scripts.visualization.plot_error_summary(...)` generate diagnostic plots for inspection.
 
 ## Server Notes

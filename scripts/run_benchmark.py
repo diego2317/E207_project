@@ -128,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     runner_kwargs: dict[str, object] | None = None
-    if args.method in {"oltw", "oltw_global", "kalman_oltw"}:
+    if args.method in {"oltw", "oltw_global"}:
         runner_kwargs = {"jar_path": args.jar_path}
 
     tolerance_grid = metrics.build_tolerance_grid(

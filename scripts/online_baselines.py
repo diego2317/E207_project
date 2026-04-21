@@ -107,8 +107,8 @@ def get_adapter_notes() -> dict[str, str]:
         "output": "AlignmentResult with monotonic time mapping and method metadata.",
         "registration": "Call register_online_baseline('oltw', runner), register_online_baseline('oltw_global', runner), or register_online_baseline('kalman_oltw', runner) to override the defaults.",
         "default_oltw": "The built-in `oltw` and `oltw_global` methods call PerformanceMatcher.jar by default.",
-        "default_kalman_oltw": "The built-in `kalman_oltw` method uses PerformanceMatcher.jar as a measurement source and smooths it with a Kalman filter.",
-        "audio_paths": "The default Java-backed baselines consume audio paths from FeatureSequence.metadata['audio_path'] and ignore feature values.",
+        "default_kalman_oltw": "The built-in `kalman_oltw` method runs native Python streaming normalized DTW and uses a Kalman filter to guide the online search.",
+        "audio_paths": "The Java-backed baselines consume audio paths from FeatureSequence.metadata['audio_path']; `kalman_oltw` uses feature values directly.",
     }
 
 
@@ -134,4 +134,3 @@ def _run_registered_baseline(
 
 run_oltw.uses_audio_paths = True
 run_oltw_global.uses_audio_paths = True
-run_kalman_oltw.uses_audio_paths = True

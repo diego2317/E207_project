@@ -556,28 +556,23 @@ def test_run_alignment_benchmark_supports_performance_matcher_oltw(
     assert (metrics_frame["mean_abs_error_s"] < 0.05).all()
 
 
-def test_kalman_online_builds_measurement_track() -> None:
-    raw_alignment = np.array(
-        [
-            [1, 1],
-            [1, 2],
-            [3, 4],
-        ],
-        dtype=np.int64,
+def test_kalman_online_streaming_measurements_follow_identity_path() -> None:
+    reference = np.eye(5, dtype=np.float64)
+    query = np.eye(5, dtype=np.float64)
+
+    measurement_indices, measurement_scores, filtered_states = kalman_online._run_kalman_guided_online_dtw(
+        reference_values=reference,
+        query_values=query,
+        config=kalman_online.KalmanFilterConfig(
+            min_search_half_window=2,
+            position_prior_weight=0.0,
+        ),
+        metric="cosine",
     )
 
-    measurements = kalman_online._build_measurement_track(
-        raw_alignment=raw_alignment,
-        num_reference_frames=8,
-        num_query_frames=5,
-    )
-
-    expected = np.array([0.0, 2.0, np.nan, 4.0, np.nan], dtype=np.float64)
-    np.testing.assert_array_equal(np.isnan(measurements), np.isnan(expected))
-    np.testing.assert_allclose(
-        measurements[~np.isnan(expected)],
-        expected[~np.isnan(expected)],
-    )
+    np.testing.assert_array_equal(measurement_indices, np.arange(5, dtype=np.int64))
+    assert np.all(np.diff(filtered_states[:, 0]) >= 0.0)
+    assert np.all(measurement_scores <= 1.0e-8)
 
 
 def test_kalman_online_filter_enforces_monotone_positions() -> None:
@@ -595,71 +590,38 @@ def test_kalman_online_filter_enforces_monotone_positions() -> None:
     assert np.all(states[:, 1] <= 4.0)
 
 
-def test_kalman_online_runner_records_prototype_metadata(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_kalman_online_runner_records_native_metadata() -> None:
     reference = FeatureSequence(
-        values=np.zeros((6, 1), dtype=np.float64),
+        values=np.eye(6, dtype=np.float64),
         frame_times=np.arange(6, dtype=np.float64) * 0.5,
         sample_rate=1,
         hop_length=1,
         feature_name="toy",
-        metadata={"audio_path": "reference.wav", "recording_id": "reference"},
+        metadata={"recording_id": "reference"},
     )
     query = FeatureSequence(
-        values=np.zeros((6, 1), dtype=np.float64),
+        values=np.eye(6, dtype=np.float64),
         frame_times=np.arange(6, dtype=np.float64) * 0.5,
         sample_rate=1,
         hop_length=1,
         feature_name="toy",
-        metadata={"audio_path": "query.wav", "recording_id": "query"},
+        metadata={"recording_id": "query"},
     )
 
-    def fake_run(*args: object, **kwargs: object) -> object:
-        class Completed:
-            returncode = 0
-            stdout = "\n".join(
-                [
-                    "ALIGNMENT: 1, 1",
-                    "ALIGNMENT: 2, 2",
-                    "ALIGNMENT: 3, 3",
-                ]
-            )
-            stderr = ""
-
-        return Completed()
-
-    monkeypatch.setattr(kalman_online.subprocess, "run", fake_run)
-    result = kalman_online.run_kalman_oltw(
-        reference,
-        query,
-        jar_path=Path("PerformanceMatcher.jar"),
-    )
+    result = kalman_online.run_kalman_oltw(reference, query)
 
     assert result.method_name == "kalman_oltw"
-    assert result.metadata["backend"] == "PerformanceMatcher.jar"
-    assert result.metadata["measurement_source"] == "alignment_frontier"
-    assert result.metadata["spec_faithful"] is False
+    assert result.metadata["backend"] == "python_streaming_normalized_dtw"
+    assert result.metadata["measurement_source"] == "normalized_row_argmin"
+    assert result.metadata["spec_faithful"] is True
+    np.testing.assert_array_equal(result.path[:, 1], np.arange(6, dtype=np.int64))
+    assert np.all(np.diff(result.path[:, 0]) >= 0)
 
 
 def test_run_alignment_benchmark_supports_kalman_oltw(
-    monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     dataset_root = _build_synthetic_dataset(tmp_path)
-
-    def fake_run(*args: object, **kwargs: object) -> object:
-        class Completed:
-            returncode = 0
-            stdout = "\n".join(
-                f"ALIGNMENT: {index}, {index}"
-                for index in range(1, 90)
-            )
-            stderr = ""
-
-        return Completed()
-
-    monkeypatch.setattr(kalman_online.subprocess, "run", fake_run)
 
     metrics_frame = evaluation.run_alignment_benchmark(
         dataset_root=dataset_root,
