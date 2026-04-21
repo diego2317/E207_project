@@ -127,6 +127,7 @@ def evaluate_recording_pair(
         query_beats=query_beats,
         tolerances=metric_tolerances,
     )
+    metric_row.update(alignment_result.metadata)
     error_frame = metrics.compute_alignment_error_trace(
         alignment_result,
         reference_beats=reference_beats,

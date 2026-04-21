@@ -45,6 +45,9 @@ class SearchPolicyConfig:
     uncertainty_scale: float
     start_anywhere: bool
     recovery_strategy: str = "full_width"
+    recovery_search_half_windows: tuple[int, ...] = ()
+    low_confidence_margin_threshold: float = 0.0
+    proactive_innovation_z_threshold: float = float("inf")
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +59,11 @@ class CouplingConfig:
     position_prior_weight: float
     measurement_source: str
     confidence_source: str
+    downweight_margin_threshold: float = 0.0
+    skip_margin_threshold: float = 0.0
+    downweight_innovation_z_threshold: float = float("inf")
+    skip_innovation_z_threshold: float = float("inf")
+    downweight_measurement_variance_scale: float = 1.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,6 +103,7 @@ class SearchWindow:
     right: int
     radius: float
     recovery_mode: str
+    expansion_stage: int = 0
 
 
 @dataclass(slots=True)
@@ -106,7 +115,21 @@ class RowUpdateDiagnostics:
     second_best_score: float
     best_score_margin: float
     used_recovery_window: bool
+    recovery_reason: str
+    recovery_stage: int
     transition_usage: dict[str, int]
+
+
+@dataclass(frozen=True, slots=True)
+class MeasurementUpdateDecision:
+    """How much the tracker should trust one DP-derived measurement."""
+
+    mode: str
+    measurement_variance: float
+    skip_update: bool
+    innovation: float
+    innovation_variance: float
+    innovation_z_score: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,6 +138,10 @@ class KalmanUpdateDiagnostics:
 
     innovation: float
     innovation_variance: float
+    innovation_z_score: float
+    measurement_mode: str
+    effective_measurement_variance: float
+    skipped_update: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,6 +163,9 @@ class KalmanOnlineTrace:
     used_recovery_window: np.ndarray
     row_finite_counts: np.ndarray
     row_best_score_margins: np.ndarray
+    effective_measurement_variances: np.ndarray
+    measurement_mode_counts: dict[str, int]
+    recovery_reason_counts: dict[str, int]
     transition_usage: dict[str, int]
 
 
@@ -204,6 +234,23 @@ def _default_step_transitions() -> tuple[StepTransition, ...]:
     )
 
 
+def _hold_diag_only_transitions() -> tuple[StepTransition, ...]:
+    return (
+        StepTransition(
+            label="hold_reference",
+            reference_advance=0,
+            query_advance=1,
+            weight=HOLD_REFERENCE_WEIGHT,
+        ),
+        StepTransition(
+            label="diagonal",
+            reference_advance=1,
+            query_advance=1,
+            weight=DIAGONAL_WEIGHT,
+        ),
+    )
+
+
 def build_default_kalman_oltw_architecture(
     config: KalmanFilterConfig | None = None,
     preset_name: str = "baseline_cv",
@@ -211,6 +258,9 @@ def build_default_kalman_oltw_architecture(
     """Return the current production architecture without changing behavior."""
 
     selected_config = config or KalmanFilterConfig()
+    if preset_name != "baseline_cv":
+        return build_kalman_oltw_architecture(selected_config, preset_name=preset_name)
+
     return KalmanOLTWArchitecture(
         preset_name=preset_name,
         search_policy=SearchPolicyConfig(
@@ -243,6 +293,171 @@ def build_default_kalman_oltw_architecture(
             max_velocity=selected_config.max_velocity,
         ),
     )
+
+
+def build_kalman_oltw_architecture(
+    config: KalmanFilterConfig | None = None,
+    preset_name: str = "baseline_cv",
+) -> KalmanOLTWArchitecture:
+    """Resolve one implemented preset into a concrete architecture."""
+
+    selected_config = config or KalmanFilterConfig()
+    normalized_name = preset_name.strip().lower()
+    preset = get_kalman_oltw_preset(normalized_name)
+    if not preset.implemented:
+        raise ValueError(f"kalman_oltw preset {normalized_name!r} is documented but not implemented.")
+
+    narrow_half_window = max(48, selected_config.min_search_half_window // 3)
+    narrow_uncertainty_scale = max(1.5, selected_config.uncertainty_scale / 2.0)
+
+    if normalized_name == "baseline_cv":
+        return KalmanOLTWArchitecture(
+            preset_name=normalized_name,
+            search_policy=SearchPolicyConfig(
+                name="uncertainty_window_v1",
+                min_search_half_window=selected_config.min_search_half_window,
+                uncertainty_scale=selected_config.uncertainty_scale,
+                start_anywhere=selected_config.start_anywhere,
+                recovery_strategy="full_width",
+            ),
+            step_pattern=StepPatternConfig(
+                name="default_normalized_v1",
+                transitions=_default_step_transitions(),
+            ),
+            coupling=CouplingConfig(
+                name="gate_and_prior_v1",
+                mode="gate_and_prior",
+                position_prior_weight=selected_config.position_prior_weight,
+                measurement_source="normalized_row_argmin",
+                confidence_source="row_best_score_margin",
+            ),
+            tracker=TrackerConfig(
+                name="constant_velocity_v1",
+                state_model="constant_velocity",
+                position_variance=selected_config.position_variance,
+                velocity_variance=selected_config.velocity_variance,
+                process_position_variance=selected_config.process_position_variance,
+                process_velocity_variance=selected_config.process_velocity_variance,
+                measurement_variance=selected_config.measurement_variance,
+                min_velocity=selected_config.min_velocity,
+                max_velocity=selected_config.max_velocity,
+            ),
+        )
+
+    if normalized_name == "hold_diag_only":
+        return KalmanOLTWArchitecture(
+            preset_name=normalized_name,
+            search_policy=SearchPolicyConfig(
+                name="uncertainty_window_v1",
+                min_search_half_window=selected_config.min_search_half_window,
+                uncertainty_scale=selected_config.uncertainty_scale,
+                start_anywhere=selected_config.start_anywhere,
+                recovery_strategy="full_width",
+            ),
+            step_pattern=StepPatternConfig(
+                name="hold_diag_only",
+                transitions=_hold_diag_only_transitions(),
+            ),
+            coupling=CouplingConfig(
+                name="gate_and_prior_v1",
+                mode="gate_and_prior",
+                position_prior_weight=selected_config.position_prior_weight,
+                measurement_source="normalized_row_argmin",
+                confidence_source="row_best_score_margin",
+            ),
+            tracker=TrackerConfig(
+                name="constant_velocity_v1",
+                state_model="constant_velocity",
+                position_variance=selected_config.position_variance,
+                velocity_variance=selected_config.velocity_variance,
+                process_position_variance=selected_config.process_position_variance,
+                process_velocity_variance=selected_config.process_velocity_variance,
+                measurement_variance=selected_config.measurement_variance,
+                min_velocity=selected_config.min_velocity,
+                max_velocity=selected_config.max_velocity,
+            ),
+        )
+
+    if normalized_name == "hold_diag_narrow":
+        return KalmanOLTWArchitecture(
+            preset_name=normalized_name,
+            search_policy=SearchPolicyConfig(
+                name="narrow_uncertainty_window_v1",
+                min_search_half_window=narrow_half_window,
+                uncertainty_scale=narrow_uncertainty_scale,
+                start_anywhere=selected_config.start_anywhere,
+                recovery_strategy="expand_then_full_width",
+                recovery_search_half_windows=(selected_config.min_search_half_window,),
+                low_confidence_margin_threshold=0.015,
+                proactive_innovation_z_threshold=3.5,
+            ),
+            step_pattern=StepPatternConfig(
+                name="hold_diag_only",
+                transitions=_hold_diag_only_transitions(),
+            ),
+            coupling=CouplingConfig(
+                name="gate_and_prior_v1",
+                mode="gate_and_prior",
+                position_prior_weight=selected_config.position_prior_weight,
+                measurement_source="normalized_row_argmin",
+                confidence_source="row_best_score_margin",
+            ),
+            tracker=TrackerConfig(
+                name="constant_velocity_v1",
+                state_model="constant_velocity",
+                position_variance=selected_config.position_variance,
+                velocity_variance=selected_config.velocity_variance,
+                process_position_variance=selected_config.process_position_variance,
+                process_velocity_variance=selected_config.process_velocity_variance,
+                measurement_variance=selected_config.measurement_variance,
+                min_velocity=selected_config.min_velocity,
+                max_velocity=selected_config.max_velocity,
+            ),
+        )
+
+    if normalized_name == "hold_diag_narrow_confidence":
+        return KalmanOLTWArchitecture(
+            preset_name=normalized_name,
+            search_policy=SearchPolicyConfig(
+                name="narrow_uncertainty_window_v1",
+                min_search_half_window=narrow_half_window,
+                uncertainty_scale=narrow_uncertainty_scale,
+                start_anywhere=selected_config.start_anywhere,
+                recovery_strategy="expand_then_full_width",
+                recovery_search_half_windows=(selected_config.min_search_half_window,),
+                low_confidence_margin_threshold=0.02,
+                proactive_innovation_z_threshold=3.0,
+            ),
+            step_pattern=StepPatternConfig(
+                name="hold_diag_only",
+                transitions=_hold_diag_only_transitions(),
+            ),
+            coupling=CouplingConfig(
+                name="confidence_aware_gate_and_prior_v1",
+                mode="confidence_aware_gate_and_prior",
+                position_prior_weight=selected_config.position_prior_weight,
+                measurement_source="confidence_gated_row_argmin",
+                confidence_source="row_best_score_margin_and_innovation",
+                downweight_margin_threshold=0.02,
+                skip_margin_threshold=0.005,
+                downweight_innovation_z_threshold=2.5,
+                skip_innovation_z_threshold=4.0,
+                downweight_measurement_variance_scale=9.0,
+            ),
+            tracker=TrackerConfig(
+                name="constant_velocity_v1",
+                state_model="constant_velocity",
+                position_variance=selected_config.position_variance,
+                velocity_variance=selected_config.velocity_variance,
+                process_position_variance=selected_config.process_position_variance,
+                process_velocity_variance=selected_config.process_velocity_variance,
+                measurement_variance=selected_config.measurement_variance,
+                min_velocity=selected_config.min_velocity,
+                max_velocity=selected_config.max_velocity,
+            ),
+        )
+
+    raise ValueError(f"Unhandled implemented kalman_oltw preset {normalized_name!r}.")
 
 
 _KALMAN_EXPERIMENT_PRESETS: dict[str, KalmanExperimentPreset] = {
@@ -293,12 +508,30 @@ _KALMAN_EXPERIMENT_PRESETS: dict[str, KalmanExperimentPreset] = {
     ),
     "hold_diag_only": KalmanExperimentPreset(
         name="hold_diag_only",
-        description="Planned minimal transition set that removes the double-step transitions to test whether they are destabilizing the tracker.",
+        description="Minimal transition set that removes the double-step transitions to test whether they are destabilizing the tracker.",
         tracker_model="constant_velocity",
         search_policy="uncertainty_window_v1",
         step_pattern="hold_diag_only",
         coupling="gate_and_prior_v1",
-        implemented=False,
+        implemented=True,
+    ),
+    "hold_diag_narrow": KalmanExperimentPreset(
+        name="hold_diag_narrow",
+        description="Hold-plus-diagonal variant with a narrower search window and staged recovery expansion.",
+        tracker_model="constant_velocity",
+        search_policy="narrow_uncertainty_window_v1",
+        step_pattern="hold_diag_only",
+        coupling="gate_and_prior_v1",
+        implemented=True,
+    ),
+    "hold_diag_narrow_confidence": KalmanExperimentPreset(
+        name="hold_diag_narrow_confidence",
+        description="Hold-plus-diagonal narrow-window variant with confidence-aware Kalman measurement gating.",
+        tracker_model="constant_velocity",
+        search_policy="narrow_uncertainty_window_v1",
+        step_pattern="hold_diag_only",
+        coupling="confidence_aware_gate_and_prior_v1",
+        implemented=True,
     ),
     "symmetric_doubles": KalmanExperimentPreset(
         name="symmetric_doubles",
@@ -339,6 +572,7 @@ def run_kalman_oltw(
     query_features: FeatureSequence,
     metric: str = "cosine",
     kalman_config: KalmanFilterConfig | None = None,
+    preset_name: str = "baseline_cv",
 ) -> AlignmentResult:
     """Run the native Kalman-guided normalized online DTW prototype."""
 
@@ -348,7 +582,7 @@ def run_kalman_oltw(
         raise ValueError("kalman_oltw requires non-empty reference and query feature sequences.")
 
     config = kalman_config or KalmanFilterConfig()
-    architecture = config.to_architecture()
+    architecture = build_kalman_oltw_architecture(config, preset_name=preset_name)
     measurement_indices, measurement_scores, filtered_states, trace = _run_kalman_guided_online_dtw(
         reference_values=reference_values,
         query_values=query_values,
@@ -381,6 +615,7 @@ def run_kalman_oltw(
             "measurement_count": int(measurement_indices.size),
             "mean_measurement_score": float(np.mean(measurement_scores)),
             "max_measurement_score": float(np.max(measurement_scores)),
+            "implemented_preset": True,
             "initial_velocity_frames_per_query_frame": float(
                 _estimate_initial_velocity(
                     num_reference_frames=reference_features.frame_times.size,
@@ -472,6 +707,8 @@ def _run_kalman_guided_online_dtw(
         ),
     )
     minimum_reference_index = 0
+    previous_row_margin = float("inf")
+    previous_innovation_z_score = 0.0
 
     for query_index in range(num_query_frames):
         if query_index > 0:
@@ -498,9 +735,11 @@ def _run_kalman_guided_online_dtw(
             num_reference_frames=num_reference_frames,
             search_policy=resolved_architecture.search_policy,
             query_index=query_index,
+            previous_row_margin=previous_row_margin,
+            previous_innovation_z_score=previous_innovation_z_score,
         )
 
-        current_totals, current_lengths, row_diagnostics = _update_streaming_row(
+        current_totals, current_lengths, row_diagnostics, search_window = _update_streaming_row_with_recovery(
             local_cost_row=local_cost_row,
             row_history=row_history,
             search_window=search_window,
@@ -508,6 +747,8 @@ def _run_kalman_guided_online_dtw(
             predicted_position=predicted_position,
             coupling_config=resolved_architecture.coupling,
             step_pattern=resolved_architecture.step_pattern,
+            minimum_reference_index=minimum_reference_index,
+            search_policy=resolved_architecture.search_policy,
         )
 
         normalized_scores = _compute_normalized_scores(current_totals, current_lengths)
@@ -517,6 +758,14 @@ def _run_kalman_guided_online_dtw(
         )
         measurement_value = float(measurement_index)
         measurement_score = float(normalized_scores[measurement_index])
+        measurement_decision = _classify_measurement_update(
+            predicted_state=predicted_state,
+            covariance=covariance,
+            measurement=measurement_value,
+            row_diagnostics=row_diagnostics,
+            coupling_config=resolved_architecture.coupling,
+            tracker_config=resolved_architecture.tracker,
+        )
 
         state, covariance, kalman_diagnostics = _kalman_update(
             state=state,
@@ -525,6 +774,12 @@ def _run_kalman_guided_online_dtw(
             num_reference_frames=num_reference_frames,
             previous_position=float(filtered_states[query_index - 1, 0]) if query_index > 0 else 0.0,
             tracker_config=resolved_architecture.tracker,
+            measurement_variance=measurement_decision.measurement_variance,
+            skip_update=measurement_decision.skip_update,
+            measurement_mode=measurement_decision.mode,
+            innovation=measurement_decision.innovation,
+            innovation_variance=measurement_decision.innovation_variance,
+            innovation_z_score=measurement_decision.innovation_z_score,
         )
 
         measurement_indices[query_index] = measurement_index
@@ -549,6 +804,8 @@ def _run_kalman_guided_online_dtw(
         for lag in range(max_query_advance, 1, -1):
             row_history[lag] = row_history[lag - 1]
         row_history[1] = (current_totals, current_lengths)
+        previous_row_margin = row_diagnostics.best_score_margin
+        previous_innovation_z_score = kalman_diagnostics.innovation_z_score
 
     if return_trace:
         return measurement_indices, measurement_scores, filtered_states, trace
@@ -575,6 +832,9 @@ def _initialize_trace(
         used_recovery_window=np.zeros(num_query_frames, dtype=bool),
         row_finite_counts=np.zeros(num_query_frames, dtype=np.int64),
         row_best_score_margins=np.zeros(num_query_frames, dtype=np.float64),
+        effective_measurement_variances=np.zeros(num_query_frames, dtype=np.float64),
+        measurement_mode_counts={"accepted": 0, "downweighted": 0, "skipped": 0},
+        recovery_reason_counts={},
         transition_usage={label: 0 for label in transition_labels},
     )
 
@@ -606,6 +866,13 @@ def _record_trace_step(
     trace.used_recovery_window[query_index] = row_diagnostics.used_recovery_window
     trace.row_finite_counts[query_index] = row_diagnostics.finite_candidate_count
     trace.row_best_score_margins[query_index] = row_diagnostics.best_score_margin
+    trace.effective_measurement_variances[query_index] = kalman_diagnostics.effective_measurement_variance
+    trace.measurement_mode_counts[kalman_diagnostics.measurement_mode] = (
+        trace.measurement_mode_counts.get(kalman_diagnostics.measurement_mode, 0) + 1
+    )
+    trace.recovery_reason_counts[row_diagnostics.recovery_reason] = (
+        trace.recovery_reason_counts.get(row_diagnostics.recovery_reason, 0) + 1
+    )
 
 
 def _summarize_trace(trace: KalmanOnlineTrace) -> dict[str, object]:
@@ -618,8 +885,13 @@ def _summarize_trace(trace: KalmanOnlineTrace) -> dict[str, object]:
         "mean_search_width": float(np.mean(search_widths)),
         "max_search_width": int(np.max(search_widths)),
         "recovery_row_count": int(np.count_nonzero(trace.used_recovery_window)),
+        "recovery_reason_counts": dict(trace.recovery_reason_counts),
         "mean_row_finite_count": float(np.mean(trace.row_finite_counts)),
         "mean_row_best_score_margin": mean_row_best_margin,
+        "measurement_accepted_count": int(trace.measurement_mode_counts.get("accepted", 0)),
+        "measurement_downweighted_count": int(trace.measurement_mode_counts.get("downweighted", 0)),
+        "measurement_skipped_count": int(trace.measurement_mode_counts.get("skipped", 0)),
+        "mean_effective_measurement_variance": float(np.mean(trace.effective_measurement_variances)),
         "transition_usage": dict(trace.transition_usage),
     }
 
@@ -660,6 +932,8 @@ def _compute_search_window(
     num_reference_frames: int,
     search_policy: SearchPolicyConfig,
     query_index: int,
+    previous_row_margin: float,
+    previous_innovation_z_score: float,
 ) -> SearchWindow:
     radius = float(
         max(
@@ -675,6 +949,50 @@ def _compute_search_window(
             recovery_mode="start_anywhere",
         )
 
+    proactive_half_window: int | None = None
+    proactive_mode = "base"
+    if (
+        search_policy.recovery_search_half_windows
+        and previous_innovation_z_score >= search_policy.proactive_innovation_z_threshold
+    ):
+        proactive_half_window = search_policy.recovery_search_half_windows[0]
+        proactive_mode = "proactive_innovation"
+    elif (
+        search_policy.recovery_search_half_windows
+        and search_policy.low_confidence_margin_threshold > 0.0
+        and previous_row_margin < search_policy.low_confidence_margin_threshold
+    ):
+        proactive_half_window = search_policy.recovery_search_half_windows[0]
+        proactive_mode = "proactive_low_confidence"
+
+    if proactive_half_window is not None:
+        return _build_window_from_radius(
+            predicted_position=predicted_position,
+            minimum_reference_index=minimum_reference_index,
+            num_reference_frames=num_reference_frames,
+            radius=float(max(proactive_half_window, 1)),
+            recovery_mode=proactive_mode,
+            expansion_stage=1,
+        )
+
+    return _build_window_from_radius(
+        predicted_position=predicted_position,
+        minimum_reference_index=minimum_reference_index,
+        num_reference_frames=num_reference_frames,
+        radius=max(radius, 1.0),
+        recovery_mode="base",
+        expansion_stage=0,
+    )
+
+
+def _build_window_from_radius(
+    predicted_position: float,
+    minimum_reference_index: int,
+    num_reference_frames: int,
+    radius: float,
+    recovery_mode: str,
+    expansion_stage: int,
+) -> SearchWindow:
     left = max(minimum_reference_index, int(np.floor(predicted_position - radius)))
     right = min(num_reference_frames - 1, int(np.ceil(predicted_position + radius)))
     if left > right:
@@ -684,7 +1002,8 @@ def _compute_search_window(
         left=left,
         right=right,
         radius=max(radius, 1.0),
-        recovery_mode="window",
+        recovery_mode=recovery_mode,
+        expansion_stage=expansion_stage,
     )
 
 
@@ -753,33 +1072,6 @@ def _update_streaming_row(
         if best_transition_label is not None:
             transition_usage[best_transition_label] += 1
 
-    if not np.isfinite(current_totals[search_window.left : search_window.right + 1]).any():
-        if search_window.left == 0 and search_window.right == num_reference_frames - 1:
-            reachable_counts = {
-                lag: int(np.count_nonzero(np.isfinite(totals)))
-                for lag, (totals, _) in row_history.items()
-            }
-            raise RuntimeError(
-                "Streaming online DTW produced no reachable cells for the current row. "
-                f"query_index={query_index} reachable_counts={reachable_counts}"
-            )
-        recovered_totals, recovered_lengths, recovered_diagnostics = _update_streaming_row(
-            local_cost_row=local_cost_row,
-            row_history=row_history,
-            search_window=SearchWindow(
-                left=0,
-                right=num_reference_frames - 1,
-                radius=max(float(num_reference_frames), 1.0),
-                recovery_mode="full_width",
-            ),
-            query_index=query_index,
-            predicted_position=predicted_position,
-            coupling_config=coupling_config,
-            step_pattern=step_pattern,
-        )
-        recovered_diagnostics.used_recovery_window = True
-        return recovered_totals, recovered_lengths, recovered_diagnostics
-
     normalized_scores = _compute_normalized_scores(current_totals, current_lengths)
     finite_scores = normalized_scores[np.isfinite(normalized_scores)]
     best_score, second_best_score, best_score_margin = _compute_score_margin(finite_scores)
@@ -792,9 +1084,118 @@ def _update_streaming_row(
             second_best_score=second_best_score,
             best_score_margin=best_score_margin,
             used_recovery_window=False,
+            recovery_reason="base",
+            recovery_stage=search_window.expansion_stage,
             transition_usage=transition_usage,
         ),
     )
+
+
+def _update_streaming_row_with_recovery(
+    local_cost_row: np.ndarray,
+    row_history: dict[int, tuple[np.ndarray, np.ndarray]],
+    search_window: SearchWindow,
+    query_index: int,
+    predicted_position: float,
+    coupling_config: CouplingConfig,
+    step_pattern: StepPatternConfig,
+    minimum_reference_index: int,
+    search_policy: SearchPolicyConfig,
+) -> tuple[np.ndarray, np.ndarray, RowUpdateDiagnostics, SearchWindow]:
+    num_reference_frames = local_cost_row.size
+    current_window = search_window
+    recovery_reason = current_window.recovery_mode if current_window.recovery_mode != "base" else "base"
+
+    for stage_index, recovery_half_window in enumerate(search_policy.recovery_search_half_windows, start=1):
+        current_totals, current_lengths, diagnostics = _update_streaming_row(
+            local_cost_row=local_cost_row,
+            row_history=row_history,
+            search_window=current_window,
+            query_index=query_index,
+            predicted_position=predicted_position,
+            coupling_config=coupling_config,
+            step_pattern=step_pattern,
+        )
+        has_reachable = diagnostics.finite_candidate_count > 0
+        should_expand_for_confidence = (
+            has_reachable
+            and search_policy.low_confidence_margin_threshold > 0.0
+            and diagnostics.best_score_margin < search_policy.low_confidence_margin_threshold
+            and current_window.expansion_stage < len(search_policy.recovery_search_half_windows)
+        )
+        if has_reachable and not should_expand_for_confidence:
+            if current_window.expansion_stage > 0:
+                diagnostics.used_recovery_window = True
+                diagnostics.recovery_reason = recovery_reason
+            return current_totals, current_lengths, diagnostics, current_window
+
+        recovery_reason = "no_reachable_cells" if not has_reachable else "low_confidence_margin"
+        if current_window.expansion_stage >= len(search_policy.recovery_search_half_windows):
+            break
+        current_window = _build_window_from_radius(
+            predicted_position=predicted_position,
+            minimum_reference_index=minimum_reference_index,
+            num_reference_frames=num_reference_frames,
+            radius=float(max(recovery_half_window, 1)),
+            recovery_mode=recovery_reason,
+            expansion_stage=stage_index,
+        )
+
+    current_totals, current_lengths, diagnostics = _update_streaming_row(
+        local_cost_row=local_cost_row,
+        row_history=row_history,
+        search_window=current_window,
+        query_index=query_index,
+        predicted_position=predicted_position,
+        coupling_config=coupling_config,
+        step_pattern=step_pattern,
+    )
+    if diagnostics.finite_candidate_count > 0:
+        if current_window.expansion_stage > 0:
+            diagnostics.used_recovery_window = True
+            diagnostics.recovery_reason = recovery_reason
+        return current_totals, current_lengths, diagnostics, current_window
+
+    if search_policy.recovery_strategy not in {"full_width", "expand_then_full_width"}:
+        reachable_counts = {
+            lag: int(np.count_nonzero(np.isfinite(totals)))
+            for lag, (totals, _) in row_history.items()
+        }
+        raise RuntimeError(
+            "Streaming online DTW produced no reachable cells for the current row. "
+            f"query_index={query_index} reachable_counts={reachable_counts}"
+        )
+
+    full_width_window = SearchWindow(
+        left=0,
+        right=num_reference_frames - 1,
+        radius=max(float(num_reference_frames), 1.0),
+        recovery_mode="full_width",
+        expansion_stage=current_window.expansion_stage + 1,
+    )
+    recovered_totals, recovered_lengths, recovered_diagnostics = _update_streaming_row(
+        local_cost_row=local_cost_row,
+        row_history=row_history,
+        search_window=full_width_window,
+        query_index=query_index,
+        predicted_position=predicted_position,
+        coupling_config=coupling_config,
+        step_pattern=step_pattern,
+    )
+    if recovered_diagnostics.finite_candidate_count == 0:
+        reachable_counts = {
+            lag: int(np.count_nonzero(np.isfinite(totals)))
+            for lag, (totals, _) in row_history.items()
+        }
+        raise RuntimeError(
+            "Streaming online DTW produced no reachable cells for the current row. "
+            f"query_index={query_index} reachable_counts={reachable_counts}"
+        )
+
+    recovered_diagnostics.used_recovery_window = True
+    recovered_diagnostics.recovery_reason = "full_width"
+    recovered_diagnostics.recovery_stage = full_width_window.expansion_stage
+    return recovered_totals, recovered_lengths, recovered_diagnostics, full_width_window
 
 
 def _compute_score_margin(finite_scores: np.ndarray) -> tuple[float, float, float]:
@@ -835,6 +1236,72 @@ def _select_measurement_index(
     return int(valid_indices[best_offset])
 
 
+def _classify_measurement_update(
+    predicted_state: np.ndarray,
+    covariance: np.ndarray,
+    measurement: float,
+    row_diagnostics: RowUpdateDiagnostics,
+    coupling_config: CouplingConfig,
+    tracker_config: TrackerConfig,
+) -> MeasurementUpdateDecision:
+    base_measurement_variance = float(tracker_config.measurement_variance)
+    innovation = float(measurement - predicted_state[0])
+    innovation_variance = float(covariance[0, 0] + base_measurement_variance)
+    innovation_z_score = float(
+        abs(innovation) / np.sqrt(max(innovation_variance, np.finfo(np.float64).eps))
+    )
+
+    if coupling_config.mode != "confidence_aware_gate_and_prior":
+        return MeasurementUpdateDecision(
+            mode="accepted",
+            measurement_variance=base_measurement_variance,
+            skip_update=False,
+            innovation=innovation,
+            innovation_variance=innovation_variance,
+            innovation_z_score=innovation_z_score,
+        )
+
+    if (
+        innovation_z_score >= coupling_config.skip_innovation_z_threshold
+        or row_diagnostics.best_score_margin < coupling_config.skip_margin_threshold
+    ):
+        return MeasurementUpdateDecision(
+            mode="skipped",
+            measurement_variance=base_measurement_variance,
+            skip_update=True,
+            innovation=innovation,
+            innovation_variance=innovation_variance,
+            innovation_z_score=innovation_z_score,
+        )
+
+    if (
+        innovation_z_score >= coupling_config.downweight_innovation_z_threshold
+        or row_diagnostics.best_score_margin < coupling_config.downweight_margin_threshold
+    ):
+        scaled_variance = base_measurement_variance * coupling_config.downweight_measurement_variance_scale
+        scaled_innovation_variance = float(covariance[0, 0] + scaled_variance)
+        scaled_innovation_z_score = float(
+            abs(innovation) / np.sqrt(max(scaled_innovation_variance, np.finfo(np.float64).eps))
+        )
+        return MeasurementUpdateDecision(
+            mode="downweighted",
+            measurement_variance=scaled_variance,
+            skip_update=False,
+            innovation=innovation,
+            innovation_variance=scaled_innovation_variance,
+            innovation_z_score=scaled_innovation_z_score,
+        )
+
+    return MeasurementUpdateDecision(
+        mode="accepted",
+        measurement_variance=base_measurement_variance,
+        skip_update=False,
+        innovation=innovation,
+        innovation_variance=innovation_variance,
+        innovation_z_score=innovation_z_score,
+    )
+
+
 def _kalman_predict(
     state: np.ndarray,
     covariance: np.ndarray,
@@ -856,16 +1323,44 @@ def _kalman_update(
     num_reference_frames: int,
     previous_position: float,
     tracker_config: TrackerConfig,
+    measurement_variance: float | None = None,
+    skip_update: bool = False,
+    measurement_mode: str = "accepted",
+    innovation: float | None = None,
+    innovation_variance: float | None = None,
+    innovation_z_score: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray, KalmanUpdateDiagnostics]:
     observation = np.array([[1.0, 0.0]], dtype=np.float64)
     identity = np.eye(2, dtype=np.float64)
-    measurement_noise = np.array([[tracker_config.measurement_variance]], dtype=np.float64)
+    resolved_measurement_variance = float(
+        tracker_config.measurement_variance if measurement_variance is None else measurement_variance
+    )
+    measurement_noise = np.array([[resolved_measurement_variance]], dtype=np.float64)
 
-    innovation = np.array([measurement], dtype=np.float64) - (observation @ state)
+    innovation_vector = np.array(
+        [measurement - float((observation @ state)[0]) if innovation is None else innovation],
+        dtype=np.float64,
+    )
     innovation_covariance = observation @ covariance @ observation.T + measurement_noise
-    kalman_gain = covariance @ observation.T @ np.linalg.inv(innovation_covariance)
-    updated_state = state + (kalman_gain @ innovation).reshape(-1)
-    updated_covariance = (identity - kalman_gain @ observation) @ covariance
+    if innovation_variance is None:
+        innovation_variance_value = float(innovation_covariance[0, 0])
+    else:
+        innovation_variance_value = float(innovation_variance)
+        innovation_covariance[0, 0] = innovation_variance_value
+    if innovation_z_score is None:
+        innovation_z_score_value = float(
+            abs(float(innovation_vector[0])) / np.sqrt(max(innovation_variance_value, np.finfo(np.float64).eps))
+        )
+    else:
+        innovation_z_score_value = float(innovation_z_score)
+
+    if skip_update:
+        updated_state = state.copy()
+        updated_covariance = covariance.copy()
+    else:
+        kalman_gain = covariance @ observation.T @ np.linalg.inv(innovation_covariance)
+        updated_state = state + (kalman_gain @ innovation_vector).reshape(-1)
+        updated_covariance = (identity - kalman_gain @ observation) @ covariance
 
     updated_state[1] = float(
         np.clip(updated_state[1], tracker_config.min_velocity, tracker_config.max_velocity)
@@ -876,8 +1371,12 @@ def _kalman_update(
         updated_state,
         updated_covariance,
         KalmanUpdateDiagnostics(
-            innovation=float(innovation[0]),
-            innovation_variance=float(innovation_covariance[0, 0]),
+            innovation=float(innovation_vector[0]),
+            innovation_variance=innovation_variance_value,
+            innovation_z_score=innovation_z_score_value,
+            measurement_mode=measurement_mode,
+            effective_measurement_variance=resolved_measurement_variance,
+            skipped_update=skip_update,
         ),
     )
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from scripts import evaluation, metrics, oltw as oltw_backend
+from scripts import evaluation, kalman_online, metrics, oltw as oltw_backend
 from scripts.config import DEFAULT_SAMPLE_RATE, METRICS_DIR, RAW_DATA_DIR
 
 
@@ -99,6 +99,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to PerformanceMatcher.jar for the Java-backed online baselines.",
     )
     parser.add_argument(
+        "--kalman-preset",
+        choices=kalman_online.list_kalman_oltw_presets(include_planned=False),
+        default="baseline_cv",
+        help="Implemented `kalman_oltw` preset to run when --method=kalman_oltw.",
+    )
+    parser.add_argument(
         "--tolerance-max-seconds",
         type=float,
         default=metrics.DEFAULT_MAX_TOLERANCE_S,
@@ -130,6 +136,8 @@ def main(argv: list[str] | None = None) -> int:
     runner_kwargs: dict[str, object] | None = None
     if args.method in {"oltw", "oltw_global"}:
         runner_kwargs = {"jar_path": args.jar_path}
+    elif args.method == "kalman_oltw":
+        runner_kwargs = {"preset_name": args.kalman_preset}
 
     tolerance_grid = metrics.build_tolerance_grid(
         max_tolerance_s=args.tolerance_max_seconds,
@@ -139,6 +147,7 @@ def main(argv: list[str] | None = None) -> int:
         method_name=args.method,
         mode=args.mode,
         pair_id=args.pair_id,
+        kalman_preset=args.kalman_preset,
     )
     metrics_frame = evaluation.run_alignment_benchmark(
         dataset_root=args.dataset_root,
@@ -165,16 +174,24 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _default_experiment_name(method_name: str, mode: str, pair_id: str | None) -> str:
+def _default_experiment_name(
+    method_name: str,
+    mode: str,
+    pair_id: str | None,
+    kalman_preset: str = "baseline_cv",
+) -> str:
+    preset_suffix = ""
+    if method_name == "kalman_oltw" and kalman_preset != "baseline_cv":
+        preset_suffix = f"_{kalman_preset}"
     if mode == "single" and pair_id:
-        return f"{method_name}_single_{pair_id}"
+        return f"{method_name}{preset_suffix}_single_{pair_id}"
     if mode == "small":
-        return f"{method_name}_small"
+        return f"{method_name}{preset_suffix}_small"
     if mode in {"full", "all_pairs"}:
-        return f"{method_name}_all_pairs"
+        return f"{method_name}{preset_suffix}_all_pairs"
     if mode == "paper_test":
-        return f"{method_name}_paper_test"
-    return f"{method_name}_benchmark"
+        return f"{method_name}{preset_suffix}_paper_test"
+    return f"{method_name}{preset_suffix}_benchmark"
 
 
 if __name__ == "__main__":

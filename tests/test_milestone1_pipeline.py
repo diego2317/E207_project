@@ -651,12 +651,180 @@ def test_kalman_online_architecture_preserves_legacy_defaults() -> None:
 
 def test_kalman_online_preset_registry_exposes_planned_experiments() -> None:
     presets = kalman_online.list_kalman_oltw_presets()
+    implemented_presets = kalman_online.list_kalman_oltw_presets(include_planned=False)
 
     assert "baseline_cv" in presets
     assert "adaptive_noise_cv" in presets
     assert "constant_acceleration" in presets
+    assert "hold_diag_only" in implemented_presets
+    assert "hold_diag_narrow" in implemented_presets
+    assert "hold_diag_narrow_confidence" in implemented_presets
     assert kalman_online.get_kalman_oltw_preset("baseline_cv").implemented is True
+    assert kalman_online.get_kalman_oltw_preset("hold_diag_only").implemented is True
     assert kalman_online.get_kalman_oltw_preset("constant_acceleration").implemented is False
+
+
+def test_kalman_online_supports_hold_diag_only_preset() -> None:
+    reference = FeatureSequence(
+        values=np.eye(6, dtype=np.float64),
+        frame_times=np.arange(6, dtype=np.float64) * 0.5,
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+        metadata={"recording_id": "reference"},
+    )
+    query = FeatureSequence(
+        values=np.eye(6, dtype=np.float64),
+        frame_times=np.arange(6, dtype=np.float64) * 0.5,
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+        metadata={"recording_id": "query"},
+    )
+
+    result = kalman_online.run_kalman_oltw(reference, query, preset_name="hold_diag_only")
+
+    assert result.metadata["architecture_preset"] == "hold_diag_only"
+    assert result.metadata["step_pattern_name"] == "hold_diag_only"
+    assert result.metadata["measurement_source"] == "normalized_row_argmin"
+    assert set(result.metadata["transition_usage"]) == {"hold_reference", "diagonal"}
+
+
+def test_kalman_online_confidence_coupling_downweights_and_skips_measurements() -> None:
+    tracker = kalman_online.TrackerConfig(
+        name="constant_velocity_v1",
+        state_model="constant_velocity",
+        position_variance=64.0,
+        velocity_variance=0.25,
+        process_position_variance=4.0,
+        process_velocity_variance=1.0e-2,
+        measurement_variance=9.0,
+        min_velocity=0.25,
+        max_velocity=4.0,
+    )
+    coupling = kalman_online.CouplingConfig(
+        name="confidence_aware_gate_and_prior_v1",
+        mode="confidence_aware_gate_and_prior",
+        position_prior_weight=0.05,
+        measurement_source="confidence_gated_row_argmin",
+        confidence_source="row_best_score_margin_and_innovation",
+        downweight_margin_threshold=0.02,
+        skip_margin_threshold=0.005,
+        downweight_innovation_z_threshold=2.5,
+        skip_innovation_z_threshold=4.0,
+        downweight_measurement_variance_scale=9.0,
+    )
+
+    accepted = kalman_online._classify_measurement_update(
+        predicted_state=np.array([10.0, 1.0], dtype=np.float64),
+        covariance=np.diag([4.0, 0.25]).astype(np.float64),
+        measurement=11.0,
+        row_diagnostics=kalman_online.RowUpdateDiagnostics(
+            finite_candidate_count=10,
+            best_score=0.1,
+            second_best_score=0.2,
+            best_score_margin=0.1,
+            used_recovery_window=False,
+            recovery_reason="base",
+            recovery_stage=0,
+            transition_usage={"hold_reference": 1, "diagonal": 1},
+        ),
+        coupling_config=coupling,
+        tracker_config=tracker,
+    )
+    downweighted = kalman_online._classify_measurement_update(
+        predicted_state=np.array([10.0, 1.0], dtype=np.float64),
+        covariance=np.diag([4.0, 0.25]).astype(np.float64),
+        measurement=11.0,
+        row_diagnostics=kalman_online.RowUpdateDiagnostics(
+            finite_candidate_count=10,
+            best_score=0.1,
+            second_best_score=0.11,
+            best_score_margin=0.01,
+            used_recovery_window=False,
+            recovery_reason="base",
+            recovery_stage=0,
+            transition_usage={"hold_reference": 1, "diagonal": 1},
+        ),
+        coupling_config=coupling,
+        tracker_config=tracker,
+    )
+    skipped = kalman_online._classify_measurement_update(
+        predicted_state=np.array([10.0, 1.0], dtype=np.float64),
+        covariance=np.diag([1.0, 0.25]).astype(np.float64),
+        measurement=30.0,
+        row_diagnostics=kalman_online.RowUpdateDiagnostics(
+            finite_candidate_count=10,
+            best_score=0.1,
+            second_best_score=0.2,
+            best_score_margin=0.1,
+            used_recovery_window=False,
+            recovery_reason="base",
+            recovery_stage=0,
+            transition_usage={"hold_reference": 1, "diagonal": 1},
+        ),
+        coupling_config=coupling,
+        tracker_config=tracker,
+    )
+
+    assert accepted.mode == "accepted"
+    assert accepted.skip_update is False
+    assert downweighted.mode == "downweighted"
+    assert downweighted.measurement_variance == pytest.approx(81.0)
+    assert downweighted.skip_update is False
+    assert skipped.mode == "skipped"
+    assert skipped.skip_update is True
+
+
+def test_kalman_online_recovery_expands_to_full_width_when_narrow_window_is_unreachable() -> None:
+    row_history = {
+        1: (
+            np.array([0.0, np.inf, np.inf, np.inf, np.inf], dtype=np.float64),
+            np.array([1.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64),
+        ),
+    }
+    current_totals, current_lengths, diagnostics, final_window = (
+        kalman_online._update_streaming_row_with_recovery(
+            local_cost_row=np.zeros(5, dtype=np.float64),
+            row_history=row_history,
+            search_window=kalman_online.SearchWindow(
+                left=3,
+                right=3,
+                radius=1.0,
+                recovery_mode="base",
+                expansion_stage=0,
+            ),
+            query_index=1,
+            predicted_position=3.0,
+            coupling_config=kalman_online.CouplingConfig(
+                name="gate_and_prior_v1",
+                mode="gate_and_prior",
+                position_prior_weight=0.0,
+                measurement_source="normalized_row_argmin",
+                confidence_source="row_best_score_margin",
+            ),
+            step_pattern=kalman_online.StepPatternConfig(
+                name="hold_diag_only",
+                transitions=kalman_online._hold_diag_only_transitions(),
+            ),
+            minimum_reference_index=0,
+            search_policy=kalman_online.SearchPolicyConfig(
+                name="narrow_uncertainty_window_v1",
+                min_search_half_window=1,
+                uncertainty_scale=1.0,
+                start_anywhere=False,
+                recovery_strategy="expand_then_full_width",
+                recovery_search_half_windows=(1,),
+                low_confidence_margin_threshold=0.0,
+            ),
+        )
+    )
+
+    assert np.isfinite(current_totals).any()
+    assert np.isfinite(current_lengths).any()
+    assert diagnostics.used_recovery_window is True
+    assert diagnostics.recovery_reason == "full_width"
+    assert final_window.recovery_mode == "full_width"
 
 
 def test_run_alignment_benchmark_supports_kalman_oltw(
@@ -673,7 +841,39 @@ def test_run_alignment_benchmark_supports_kalman_oltw(
 
     assert len(metrics_frame) == 2
     assert set(metrics_frame["method_name"]) == {"kalman_oltw"}
+    assert set(metrics_frame["architecture_preset"]) == {"baseline_cv"}
     assert (metrics_frame["mean_abs_error_s"] < 0.05).all()
+
+
+def test_run_alignment_benchmark_supports_kalman_oltw_preset_metadata(
+    tmp_path: Path,
+) -> None:
+    dataset_root = _build_synthetic_dataset(tmp_path)
+
+    metrics_frame = evaluation.run_alignment_benchmark(
+        dataset_root=dataset_root,
+        method_name="kalman_oltw",
+        runner_kwargs={"preset_name": "hold_diag_only"},
+        save_outputs=False,
+        show_progress=False,
+    )
+
+    assert len(metrics_frame) == 2
+    assert set(metrics_frame["architecture_preset"]) == {"hold_diag_only"}
+    assert set(metrics_frame["step_pattern_name"]) == {"hold_diag_only"}
+    assert "measurement_accepted_count" in metrics_frame.columns
+    assert "recovery_reason_counts" in metrics_frame.columns
+
+
+def test_run_benchmark_default_name_includes_kalman_preset() -> None:
+    experiment_name = run_benchmark._default_experiment_name(
+        method_name="kalman_oltw",
+        mode="small",
+        pair_id=None,
+        kalman_preset="hold_diag_only",
+    )
+
+    assert experiment_name == "kalman_oltw_hold_diag_only_small"
 
 
 def test_run_alignment_benchmark_supports_registered_method(tmp_path: Path) -> None:
