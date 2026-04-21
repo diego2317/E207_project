@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -589,12 +590,13 @@ def test_oltw_global_passes_global_flag(monkeypatch: pytest.MonkeyPatch) -> None
     assert "-G" in commands[0]
 
 
-def test_select_recording_pairs_supports_single_small_all_pairs_and_paper_test(
+def test_select_recording_pairs_supports_single_small_all_pairs_paper_test_and_paper_half(
     tmp_path: Path,
 ) -> None:
     dataset_root = _build_split_layout_dataset(
         tmp_path,
         piece_specs={
+            "Chopin_Op017No4": [0.8, 0.9, 1.0, 1.1],
             "Chopin_Op024No2": [0.8, 0.9, 1.0, 1.1],
             "Chopin_Op030No2": [0.3, 0.4, 0.5, 1.2],
         },
@@ -609,15 +611,42 @@ def test_select_recording_pairs_supports_single_small_all_pairs_and_paper_test(
         selection_mode="paper_test",
         development_piece="Chopin_Op030No2",
     )
+    paper_half_pairs = evaluation.select_recording_pairs(
+        pairs,
+        selection_mode="paper_half",
+        development_piece="Chopin_Op030No2",
+    )
     single_pair = evaluation.select_recording_pairs(
         pairs,
         selection_mode="single",
         pair_id=full_pairs[0].pair_id,
     )
 
-    assert len(full_pairs) == 24
-    assert len(paper_pairs) == 12
-    assert {pair.piece for pair in paper_pairs} == {"Chopin_Op024No2"}
+    assert len(full_pairs) == 36
+    assert len(paper_pairs) == 24
+    assert Counter(pair.piece for pair in paper_pairs) == {
+        "Chopin_Op017No4": 12,
+        "Chopin_Op024No2": 12,
+    }
+    assert len(paper_half_pairs) == 12
+    assert Counter(pair.piece for pair in paper_half_pairs) == {
+        "Chopin_Op017No4": 6,
+        "Chopin_Op024No2": 6,
+    }
+    assert {pair.pair_id for pair in paper_half_pairs} == {
+        "Chopin_Op017No4_performance_00__Chopin_Op017No4_performance_01",
+        "Chopin_Op017No4_performance_00__Chopin_Op017No4_performance_02",
+        "Chopin_Op017No4_performance_00__Chopin_Op017No4_performance_03",
+        "Chopin_Op017No4_performance_01__Chopin_Op017No4_performance_00",
+        "Chopin_Op017No4_performance_01__Chopin_Op017No4_performance_02",
+        "Chopin_Op017No4_performance_01__Chopin_Op017No4_performance_03",
+        "Chopin_Op024No2_performance_00__Chopin_Op024No2_performance_01",
+        "Chopin_Op024No2_performance_00__Chopin_Op024No2_performance_02",
+        "Chopin_Op024No2_performance_00__Chopin_Op024No2_performance_03",
+        "Chopin_Op024No2_performance_01__Chopin_Op024No2_performance_00",
+        "Chopin_Op024No2_performance_01__Chopin_Op024No2_performance_02",
+        "Chopin_Op024No2_performance_01__Chopin_Op024No2_performance_03",
+    }
     assert len(small_pairs) == 6
     assert {pair.pair_id for pair in small_pairs} == {
         "Chopin_Op030No2_performance_00__Chopin_Op030No2_performance_01",
@@ -658,6 +687,7 @@ def test_run_offline_benchmark_supports_selection_modes(tmp_path: Path) -> None:
     dataset_root = _build_split_layout_dataset(
         tmp_path,
         piece_specs={
+            "Chopin_Op017No4": [0.7, 0.8, 0.9],
             "Chopin_Op024No2": [0.7, 0.8, 0.9],
             "Chopin_Op030No2": [0.3, 0.4, 0.5],
         },
@@ -695,12 +725,20 @@ def test_run_offline_benchmark_supports_selection_modes(tmp_path: Path) -> None:
         save_outputs=False,
         show_progress=False,
     )
+    paper_half_frame = evaluation.run_offline_benchmark(
+        dataset_root=dataset_root,
+        selection_mode="paper_half",
+        development_piece="Chopin_Op030No2",
+        save_outputs=False,
+        show_progress=False,
+    )
 
     assert len(single_frame) == 1
     assert single_frame.loc[0, "pair_id"] == target_pair_id
     assert len(small_frame) == 6
-    assert len(full_frame) == 12
-    assert len(paper_frame) == 6
+    assert len(full_frame) == 18
+    assert len(paper_frame) == 12
+    assert len(paper_half_frame) == 6
 
 
 def test_select_preview_recording_pair_returns_fastest_small_case(tmp_path: Path) -> None:
@@ -738,7 +776,7 @@ def test_run_benchmark_cli_passes_selection_arguments(
             "--method",
             "offline_dtw",
             "--mode",
-            "small",
+            "paper_half",
             "--dataset-root",
             str(tmp_path / "raw"),
             "--output-dir",
@@ -751,13 +789,13 @@ def test_run_benchmark_cli_passes_selection_arguments(
 
     assert exit_code == 0
     assert captured["method_name"] == "offline_dtw"
-    assert captured["selection_mode"] == "small"
+    assert captured["selection_mode"] == "paper_half"
     assert captured["subset_size"] == 10
     assert captured["save_outputs"] is False
     assert captured["development_piece"] == evaluation.DEFAULT_DEVELOPMENT_PIECE
     assert len(captured["tolerance_grid"]) > 10
     assert (
-        "Completed offline_dtw small benchmark run with 1 benchmark case(s)."
+        "Completed offline_dtw paper_half benchmark run with 1 benchmark case(s)."
         in capsys.readouterr().out
     )
 

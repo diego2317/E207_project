@@ -98,18 +98,51 @@ conda run -n e207-bench python -m scripts.run_benchmark \
 4. Optional paper-style validation
 ----------------------------------
 If you want a validation run before the full all-pairs benchmark, use
-`paper_test`. By default, the development piece is `Chopin_Op030No2`.
+`paper_test`. If you want a faster held-out run that still stays balanced
+across the remaining pieces, use `paper_half`. By default, the development
+piece is `Chopin_Op030No2`.
 
-Example:
+`offline_dtw` paper half:
 
 ```bash
 conda run -n e207-bench python -m scripts.run_benchmark \
   --method offline_dtw \
-  --mode paper_test \
+  --mode paper_half \
   --development-piece Chopin_Op030No2 \
-  --experiment-name offline_dtw_paper_test \
+  --experiment-name offline_dtw_paper_half \
   --show-progress
 ```
+
+`oltw` paper half:
+
+```bash
+conda run -n e207-bench python -m scripts.run_benchmark \
+  --method oltw \
+  --mode paper_half \
+  --jar-path /absolute/path/to/PerformanceMatcher.jar \
+  --development-piece Chopin_Op030No2 \
+  --experiment-name oltw_paper_half \
+  --show-progress
+```
+
+`oltw_global` paper half:
+
+```bash
+conda run -n e207-bench python -m scripts.run_benchmark \
+  --method oltw_global \
+  --mode paper_half \
+  --jar-path /absolute/path/to/PerformanceMatcher.jar \
+  --development-piece Chopin_Op030No2 \
+  --experiment-name oltw_global_paper_half \
+  --show-progress
+```
+
+Each run writes:
+
+- `outputs/metrics/<experiment_name>_pairs.csv`
+- `outputs/metrics/<experiment_name>_summary.csv`
+- `outputs/metrics/<experiment_name>_beat_errors.csv`
+- `outputs/metrics/<experiment_name>_tolerance_curve.csv`
 
 If you want to exclude pairs with large duration mismatch, add:
 

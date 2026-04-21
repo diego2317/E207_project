@@ -17,7 +17,14 @@ from scripts.models import AlignmentResult, FeatureSequence, Recording, Recordin
 
 
 AlignmentRunner = Callable[..., AlignmentResult]
-BenchmarkSelectionMode = Literal["single", "small", "full", "all_pairs", "paper_test"]
+BenchmarkSelectionMode = Literal[
+    "single",
+    "small",
+    "full",
+    "all_pairs",
+    "paper_test",
+    "paper_half",
+]
 SMALL_BENCHMARK_RECORDING_COUNT = 3
 DEFAULT_METHOD_NAME = "offline_dtw"
 DEFAULT_DEVELOPMENT_PIECE = "Chopin_Op030No2"
@@ -199,9 +206,17 @@ def select_recording_pairs(
     if selection_mode in {"full", "all_pairs"}:
         selected_pairs = ordered_pairs
     elif selection_mode == "paper_test":
-        selected_pairs = [
-            pair for pair in ordered_pairs if pair.piece != development_piece
-        ]
+        selected_pairs = _select_paper_test_benchmark_pairs(
+            ordered_pairs,
+            development_piece=development_piece,
+        )
+    elif selection_mode == "paper_half":
+        selected_pairs = _select_half_benchmark_pairs(
+            _select_paper_test_benchmark_pairs(
+                ordered_pairs,
+                development_piece=development_piece,
+            )
+        )
     elif selection_mode == "small":
         selected_pairs = _select_small_benchmark_pairs(ordered_pairs)
     elif selection_mode == "single":
@@ -376,6 +391,25 @@ def _select_small_benchmark_pairs(pairs: list[RecordingPair]) -> list[RecordingP
         and pair.query.recording_id in chosen_ids
     ]
     return sorted(selected_pairs, key=_pair_duration_key)
+
+
+def _select_paper_test_benchmark_pairs(
+    pairs: list[RecordingPair],
+    development_piece: str,
+) -> list[RecordingPair]:
+    return [pair for pair in pairs if pair.piece != development_piece]
+
+
+def _select_half_benchmark_pairs(pairs: list[RecordingPair]) -> list[RecordingPair]:
+    grouped_pairs: dict[str, list[RecordingPair]] = {}
+    for pair in pairs:
+        grouped_pairs.setdefault(pair.piece, []).append(pair)
+
+    selected_pairs: list[RecordingPair] = []
+    for piece in sorted(grouped_pairs):
+        piece_pairs = grouped_pairs[piece]
+        selected_pairs.extend(piece_pairs[: len(piece_pairs) // 2])
+    return selected_pairs
 
 
 def _collect_recordings_by_piece(pairs: list[RecordingPair]) -> dict[str, list[Recording]]:
