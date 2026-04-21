@@ -560,7 +560,7 @@ def test_kalman_online_streaming_measurements_follow_identity_path() -> None:
     reference = np.eye(5, dtype=np.float64)
     query = np.eye(5, dtype=np.float64)
 
-    measurement_indices, measurement_scores, filtered_states = kalman_online._run_kalman_guided_online_dtw(
+    measurement_indices, measurement_scores, filtered_states, trace = kalman_online._run_kalman_guided_online_dtw(
         reference_values=reference,
         query_values=query,
         config=kalman_online.KalmanFilterConfig(
@@ -568,11 +568,15 @@ def test_kalman_online_streaming_measurements_follow_identity_path() -> None:
             position_prior_weight=0.0,
         ),
         metric="cosine",
+        return_trace=True,
     )
 
     np.testing.assert_array_equal(measurement_indices, np.arange(5, dtype=np.int64))
     assert np.all(np.diff(filtered_states[:, 0]) >= 0.0)
     assert np.all(measurement_scores <= 1.0e-8)
+    assert trace.search_left_bounds.shape == (5,)
+    assert trace.search_right_bounds.shape == (5,)
+    assert trace.transition_usage["diagonal"] >= 1
 
 
 def test_kalman_online_filter_enforces_monotone_positions() -> None:
@@ -614,8 +618,45 @@ def test_kalman_online_runner_records_native_metadata() -> None:
     assert result.metadata["backend"] == "python_streaming_normalized_dtw"
     assert result.metadata["measurement_source"] == "normalized_row_argmin"
     assert result.metadata["spec_faithful"] is True
+    assert result.metadata["architecture_preset"] == "baseline_cv"
+    assert result.metadata["tracker_model"] == "constant_velocity"
+    assert result.metadata["search_policy_name"] == "uncertainty_window_v1"
+    assert result.metadata["step_pattern_name"] == "default_normalized_v1"
+    assert "transition_usage" in result.metadata
     np.testing.assert_array_equal(result.path[:, 1], np.arange(6, dtype=np.int64))
     assert np.all(np.diff(result.path[:, 0]) >= 0)
+
+
+def test_kalman_online_architecture_preserves_legacy_defaults() -> None:
+    architecture = kalman_online.build_default_kalman_oltw_architecture(
+        kalman_online.KalmanFilterConfig(
+            min_search_half_window=7,
+            uncertainty_scale=1.5,
+            position_prior_weight=0.2,
+        )
+    )
+
+    assert architecture.preset_name == "baseline_cv"
+    assert architecture.tracker.state_model == "constant_velocity"
+    assert architecture.search_policy.min_search_half_window == 7
+    assert architecture.search_policy.uncertainty_scale == 1.5
+    assert architecture.coupling.position_prior_weight == 0.2
+    assert [transition.label for transition in architecture.step_pattern.transitions] == [
+        "hold_reference",
+        "diagonal",
+        "query_double",
+        "reference_double",
+    ]
+
+
+def test_kalman_online_preset_registry_exposes_planned_experiments() -> None:
+    presets = kalman_online.list_kalman_oltw_presets()
+
+    assert "baseline_cv" in presets
+    assert "adaptive_noise_cv" in presets
+    assert "constant_acceleration" in presets
+    assert kalman_online.get_kalman_oltw_preset("baseline_cv").implemented is True
+    assert kalman_online.get_kalman_oltw_preset("constant_acceleration").implemented is False
 
 
 def test_run_alignment_benchmark_supports_kalman_oltw(

@@ -88,7 +88,7 @@ def run_kalman_oltw(
     query_features: FeatureSequence,
     **runner_kwargs: object,
 ) -> AlignmentResult:
-    """Run the Kalman-smoothed online alignment prototype."""
+    """Run the current native Kalman-guided online alignment baseline."""
 
     runner = _REGISTERED_BASELINES.get("kalman_oltw")
     if runner is not None:
@@ -107,7 +107,7 @@ def get_adapter_notes() -> dict[str, str]:
         "output": "AlignmentResult with monotonic time mapping and method metadata.",
         "registration": "Call register_online_baseline('oltw', runner), register_online_baseline('oltw_global', runner), or register_online_baseline('kalman_oltw', runner) to override the defaults.",
         "default_oltw": "The built-in `oltw` and `oltw_global` methods call PerformanceMatcher.jar by default.",
-        "default_kalman_oltw": "The built-in `kalman_oltw` method runs native Python streaming normalized DTW and uses a Kalman filter to guide the online search.",
+        "default_kalman_oltw": "The built-in `kalman_oltw` method runs the native Python streaming normalized DTW baseline and now exposes preset and diagnostics scaffolding for future search, transition, and tracker experiments.",
         "audio_paths": "The Java-backed baselines consume audio paths from FeatureSequence.metadata['audio_path']; `kalman_oltw` uses feature values directly.",
     }
 
