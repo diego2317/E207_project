@@ -78,10 +78,10 @@ python -m ipykernel install --user --name e207-bench --display-name "Python 3.10
 - `python -m scripts.run_benchmark --method offline_dtw --mode small` runs the fixed 3-recording preview benchmark (6 directed cases from the shortest eligible piece).
 - `python -m scripts.run_benchmark --method offline_dtw --mode full` runs the full directed benchmark set.
 - `python -m scripts.run_benchmark --method offline_dtw --mode paper_test --max-pairs 1000` runs the held-out `paper_test` subset but stops after the first 1000 selected directed cases.
-- `python -m scripts.run_benchmark --method oltw --mode small` runs the built-in in-repo OLTW baseline.
+- `python -m scripts.run_benchmark --method oltw --mode small` runs the default `PerformanceMatcher.jar`-backed OLTW baseline.
 - `--max-pairs` is only supported with `--mode paper_test`.
-- `scripts.online_baselines.register_online_baseline("oltw", runner)` and `register_online_baseline("oltw_global", runner)` override the default online-baseline hooks with external implementations when needed.
-- `oltw_global` is intentionally registered at the interface level but still raises a clear `NotImplementedError` until that variant is implemented.
+- `scripts.online_baselines.register_online_baseline("oltw", runner)` and `register_online_baseline("oltw_global", runner)` override the default Java-backed hooks with external implementations when needed.
+- `oltw` and `oltw_global` both default to invoking `PerformanceMatcher.jar`; any future `OnlineAlignment` integration should be registered explicitly through `scripts.online_baselines`.
 - `scripts.visualization.plot_alignment_path(...)` and `scripts.visualization.plot_error_summary(...)` generate diagnostic plots for inspection.
 
 ## Server Notes

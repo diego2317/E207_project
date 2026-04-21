@@ -1,0 +1,3365 @@
+Compiled from "EventList.java"
+public class at.ofai.music.util.EventList implements java.io.Serializable {
+  public java.util.LinkedList<at.ofai.music.util.Event> l;
+
+  protected static boolean timingCorrection;
+
+  protected static double timingDisplacement;
+
+  protected static int clockUnits;
+
+  protected static int clockRate;
+
+  protected static double metricalLevel;
+
+  public static final double UNKNOWN;
+
+  protected static boolean noMelody;
+
+  protected static boolean onlyMelody;
+
+  protected static at.ofai.music.util.Flags flags;
+
+  static {};
+    Code:
+       0: iconst_0
+       1: putstatic     #30                 // Field timingCorrection:Z
+       4: dconst_0
+       5: putstatic     #32                 // Field timingDisplacement:D
+       8: sipush        480
+      11: putstatic     #34                 // Field clockUnits:I
+      14: ldc           #36                 // int 500000
+      16: putstatic     #37                 // Field clockRate:I
+      19: dconst_0
+      20: putstatic     #39                 // Field metricalLevel:D
+      23: iconst_0
+      24: putstatic     #41                 // Field noMelody:Z
+      27: iconst_0
+      28: putstatic     #43                 // Field onlyMelody:Z
+      31: new           #45                 // class at/ofai/music/util/Flags
+      34: dup
+      35: invokespecial #47                 // Method at/ofai/music/util/Flags."<init>":()V
+      38: putstatic     #50                 // Field flags:Lat/ofai/music/util/Flags;
+      41: return
+    LineNumberTable:
+      line 122: 0
+      line 123: 4
+      line 124: 8
+      line 125: 14
+      line 126: 19
+      line 128: 23
+      line 129: 27
+      line 130: 31
+      line 118: 41
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+
+  public at.ofai.music.util.EventList();
+    Code:
+       0: aload_0
+       1: invokespecial #54                 // Method java/lang/Object."<init>":()V
+       4: aload_0
+       5: new           #55                 // class java/util/LinkedList
+       8: dup
+       9: invokespecial #57                 // Method java/util/LinkedList."<init>":()V
+      12: putfield      #58                 // Field l:Ljava/util/LinkedList;
+      15: return
+    LineNumberTable:
+      line 132: 0
+      line 133: 4
+      line 134: 15
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      16     0  this   Lat/ofai/music/util/EventList;
+
+  public at.ofai.music.util.EventList(at.ofai.music.util.EventList);
+    Code:
+       0: aload_0
+       1: invokespecial #63                 // Method "<init>":()V
+       4: aload_1
+       5: invokevirtual #64                 // Method listIterator:()Ljava/util/ListIterator;
+       8: astore_2
+       9: goto          25
+      12: aload_0
+      13: aload_2
+      14: invokeinterface #68,  1           // InterfaceMethod java/util/ListIterator.next:()Ljava/lang/Object;
+      19: checkcast     #74                 // class at/ofai/music/util/Event
+      22: invokevirtual #76                 // Method add:(Lat/ofai/music/util/Event;)V
+      25: aload_2
+      26: invokeinterface #80,  1           // InterfaceMethod java/util/ListIterator.hasNext:()Z
+      31: ifne          12
+      34: return
+    LineNumberTable:
+      line 137: 0
+      line 138: 4
+      line 139: 9
+      line 140: 12
+      line 139: 25
+      line 141: 34
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      35     0  this   Lat/ofai/music/util/EventList;
+          0      35     1     e   Lat/ofai/music/util/EventList;
+          9      26     2    it   Ljava/util/ListIterator;
+
+  public at.ofai.music.util.EventList(at.ofai.music.util.Event[]);
+    Code:
+       0: aload_0
+       1: invokespecial #63                 // Method "<init>":()V
+       4: iconst_0
+       5: istore_2
+       6: goto          19
+       9: aload_0
+      10: aload_1
+      11: iload_2
+      12: aaload
+      13: invokevirtual #76                 // Method add:(Lat/ofai/music/util/Event;)V
+      16: iinc          2, 1
+      19: iload_2
+      20: aload_1
+      21: arraylength
+      22: if_icmplt     9
+      25: return
+    LineNumberTable:
+      line 144: 0
+      line 145: 4
+      line 146: 9
+      line 145: 16
+      line 147: 25
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      26     0  this   Lat/ofai/music/util/EventList;
+          0      26     1     e   [Lat/ofai/music/util/Event;
+          6      19     2     i   I
+
+  public void add(at.ofai.music.util.Event);
+    Code:
+       0: aload_0
+       1: getfield      #58                 // Field l:Ljava/util/LinkedList;
+       4: aload_1
+       5: invokevirtual #92                 // Method java/util/LinkedList.add:(Ljava/lang/Object;)Z
+       8: pop
+       9: return
+    LineNumberTable:
+      line 150: 0
+      line 151: 9
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      10     0  this   Lat/ofai/music/util/EventList;
+          0      10     1     e   Lat/ofai/music/util/Event;
+
+  public void add(at.ofai.music.util.EventList);
+    Code:
+       0: aload_0
+       1: getfield      #58                 // Field l:Ljava/util/LinkedList;
+       4: aload_1
+       5: getfield      #58                 // Field l:Ljava/util/LinkedList;
+       8: invokevirtual #96                 // Method java/util/LinkedList.addAll:(Ljava/util/Collection;)Z
+      11: pop
+      12: return
+    LineNumberTable:
+      line 154: 0
+      line 155: 12
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      13     0  this   Lat/ofai/music/util/EventList;
+          0      13     1    ev   Lat/ofai/music/util/EventList;
+
+  public void insert(at.ofai.music.util.Event, boolean);
+    Code:
+       0: aload_0
+       1: getfield      #58                 // Field l:Ljava/util/LinkedList;
+       4: invokevirtual #103                // Method java/util/LinkedList.listIterator:()Ljava/util/ListIterator;
+       7: astore_3
+       8: goto          56
+      11: aload_1
+      12: aload_3
+      13: invokeinterface #68,  1           // InterfaceMethod java/util/ListIterator.next:()Ljava/lang/Object;
+      18: invokevirtual #104                // Method at/ofai/music/util/Event.compareTo:(Ljava/lang/Object;)I
+      21: istore        4
+      23: iload         4
+      25: ifge          38
+      28: aload_3
+      29: invokeinterface #108,  1          // InterfaceMethod java/util/ListIterator.previous:()Ljava/lang/Object;
+      34: pop
+      35: goto          65
+      38: iload_2
+      39: ifeq          56
+      42: iload         4
+      44: ifne          56
+      47: aload_3
+      48: invokeinterface #111,  1          // InterfaceMethod java/util/ListIterator.remove:()V
+      53: goto          65
+      56: aload_3
+      57: invokeinterface #80,  1           // InterfaceMethod java/util/ListIterator.hasNext:()Z
+      62: ifne          11
+      65: aload_3
+      66: aload_1
+      67: invokeinterface #114,  2          // InterfaceMethod java/util/ListIterator.add:(Ljava/lang/Object;)V
+      72: return
+    LineNumberTable:
+      line 158: 0
+      line 159: 8
+      line 160: 11
+      line 161: 23
+      line 162: 28
+      line 163: 35
+      line 164: 38
+      line 165: 47
+      line 166: 53
+      line 159: 56
+      line 169: 65
+      line 170: 72
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      73     0  this   Lat/ofai/music/util/EventList;
+          0      73     1 newEvent   Lat/ofai/music/util/Event;
+          0      73     2 uniqueTimes   Z
+          8      65     3    li   Ljava/util/ListIterator;
+         23      33     4   sgn   I
+
+  public java.util.ListIterator<at.ofai.music.util.Event> listIterator();
+    Code:
+       0: aload_0
+       1: getfield      #58                 // Field l:Ljava/util/LinkedList;
+       4: invokevirtual #103                // Method java/util/LinkedList.listIterator:()Ljava/util/ListIterator;
+       7: areturn
+    LineNumberTable:
+      line 173: 0
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0       8     0  this   Lat/ofai/music/util/EventList;
+
+  public java.util.Iterator<at.ofai.music.util.Event> iterator();
+    Code:
+       0: aload_0
+       1: getfield      #58                 // Field l:Ljava/util/LinkedList;
+       4: invokevirtual #125                // Method java/util/LinkedList.iterator:()Ljava/util/Iterator;
+       7: areturn
+    LineNumberTable:
+      line 177: 0
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0       8     0  this   Lat/ofai/music/util/EventList;
+
+  public int size();
+    Code:
+       0: aload_0
+       1: getfield      #58                 // Field l:Ljava/util/LinkedList;
+       4: invokevirtual #129                // Method java/util/LinkedList.size:()I
+       7: ireturn
+    LineNumberTable:
+      line 181: 0
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0       8     0  this   Lat/ofai/music/util/EventList;
+
+  public at.ofai.music.util.Event[] toArray();
+    Code:
+       0: aload_0
+       1: iconst_0
+       2: invokevirtual #133                // Method toArray:(I)[Lat/ofai/music/util/Event;
+       5: areturn
+    LineNumberTable:
+      line 185: 0
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0       6     0  this   Lat/ofai/music/util/EventList;
+
+  public double[] toOnsetArray();
+    Code:
+       0: aload_0
+       1: getfield      #58                 // Field l:Ljava/util/LinkedList;
+       4: invokevirtual #129                // Method java/util/LinkedList.size:()I
+       7: newarray       double
+       9: astore_1
+      10: iconst_0
+      11: istore_2
+      12: aload_0
+      13: getfield      #58                 // Field l:Ljava/util/LinkedList;
+      16: invokevirtual #125                // Method java/util/LinkedList.iterator:()Ljava/util/Iterator;
+      19: astore_3
+      20: goto          41
+      23: aload_1
+      24: iload_2
+      25: aload_3
+      26: invokeinterface #138,  1          // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+      31: checkcast     #74                 // class at/ofai/music/util/Event
+      34: getfield      #141                // Field at/ofai/music/util/Event.keyDown:D
+      37: dastore
+      38: iinc          2, 1
+      41: aload_3
+      42: invokeinterface #144,  1          // InterfaceMethod java/util/Iterator.hasNext:()Z
+      47: ifne          23
+      50: aload_1
+      51: areturn
+    LineNumberTable:
+      line 189: 0
+      line 190: 10
+      line 191: 12
+      line 192: 23
+      line 191: 38
+      line 193: 50
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      52     0  this   Lat/ofai/music/util/EventList;
+         10      42     1     d   [D
+         12      40     2     i   I
+         20      30     3    it   Ljava/util/Iterator;
+
+  public at.ofai.music.util.Event[] toArray(int);
+    Code:
+       0: iconst_0
+       1: istore_2
+       2: aload_0
+       3: getfield      #58                 // Field l:Ljava/util/LinkedList;
+       6: invokevirtual #125                // Method java/util/LinkedList.iterator:()Ljava/util/Iterator;
+       9: astore        4
+      11: goto          40
+      14: aload         4
+      16: invokeinterface #138,  1          // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+      21: checkcast     #74                 // class at/ofai/music/util/Event
+      24: astore_3
+      25: iload_1
+      26: ifeq          37
+      29: aload_3
+      30: getfield      #149                // Field at/ofai/music/util/Event.midiCommand:I
+      33: iload_1
+      34: if_icmpne     40
+      37: iinc          2, 1
+      40: aload         4
+      42: invokeinterface #144,  1          // InterfaceMethod java/util/Iterator.hasNext:()Z
+      47: ifne          14
+      50: iload_2
+      51: anewarray     #74                 // class at/ofai/music/util/Event
+      54: astore_3
+      55: iconst_0
+      56: istore        4
+      58: aload_0
+      59: getfield      #58                 // Field l:Ljava/util/LinkedList;
+      62: invokevirtual #125                // Method java/util/LinkedList.iterator:()Ljava/util/Iterator;
+      65: astore        6
+      67: goto          104
+      70: aload         6
+      72: invokeinterface #138,  1          // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+      77: checkcast     #74                 // class at/ofai/music/util/Event
+      80: astore        5
+      82: iload_1
+      83: ifeq          95
+      86: aload         5
+      88: getfield      #149                // Field at/ofai/music/util/Event.midiCommand:I
+      91: iload_1
+      92: if_icmpne     104
+      95: aload_3
+      96: iload         4
+      98: iinc          4, 1
+     101: aload         5
+     103: aastore
+     104: aload         6
+     106: invokeinterface #144,  1          // InterfaceMethod java/util/Iterator.hasNext:()Z
+     111: ifne          70
+     114: aload_3
+     115: areturn
+    LineNumberTable:
+      line 197: 0
+      line 198: 2
+      line 199: 25
+      line 200: 37
+      line 198: 40
+      line 201: 50
+      line 202: 55
+      line 203: 58
+      line 204: 82
+      line 205: 95
+      line 203: 104
+      line 206: 114
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0     116     0  this   Lat/ofai/music/util/EventList;
+          0     116     1 match   I
+          2     114     2 count   I
+         25      15     3     e   Lat/ofai/music/util/Event;
+         55      61     3     a   [Lat/ofai/music/util/Event;
+         58      58     4     i   I
+         82      22     5     e   Lat/ofai/music/util/Event;
+
+  public void writeBinary(java.lang.String);
+    Code:
+       0: new           #157                // class java/io/ObjectOutputStream
+       3: dup
+       4: new           #159                // class java/io/FileOutputStream
+       7: dup
+       8: aload_1
+       9: invokespecial #161                // Method java/io/FileOutputStream."<init>":(Ljava/lang/String;)V
+      12: invokespecial #163                // Method java/io/ObjectOutputStream."<init>":(Ljava/io/OutputStream;)V
+      15: astore_2
+      16: aload_2
+      17: aload_0
+      18: invokevirtual #166                // Method java/io/ObjectOutputStream.writeObject:(Ljava/lang/Object;)V
+      21: aload_2
+      22: invokevirtual #169                // Method java/io/ObjectOutputStream.close:()V
+      25: goto          36
+      28: astore_2
+      29: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+      32: aload_2
+      33: invokevirtual #178                // Method java/io/PrintStream.println:(Ljava/lang/Object;)V
+      36: return
+    Exception table:
+       from    to  target type
+           0    25    28   Class java/io/IOException
+    LineNumberTable:
+      line 211: 0
+      line 212: 4
+      line 211: 12
+      line 213: 16
+      line 214: 21
+      line 215: 28
+      line 216: 29
+      line 218: 36
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      37     0  this   Lat/ofai/music/util/EventList;
+          0      37     1 fileName   Ljava/lang/String;
+         16      12     2   oos   Ljava/io/ObjectOutputStream;
+         29       7     2     e   Ljava/io/IOException;
+
+  public static at.ofai.music.util.EventList readBinary(java.lang.String);
+    Code:
+       0: new           #192                // class java/io/ObjectInputStream
+       3: dup
+       4: new           #194                // class java/io/FileInputStream
+       7: dup
+       8: aload_0
+       9: invokespecial #196                // Method java/io/FileInputStream."<init>":(Ljava/lang/String;)V
+      12: invokespecial #197                // Method java/io/ObjectInputStream."<init>":(Ljava/io/InputStream;)V
+      15: astore_1
+      16: aload_1
+      17: invokevirtual #200                // Method java/io/ObjectInputStream.readObject:()Ljava/lang/Object;
+      20: checkcast     #1                  // class at/ofai/music/util/EventList
+      23: astore_2
+      24: aload_1
+      25: invokevirtual #203                // Method java/io/ObjectInputStream.close:()V
+      28: aload_2
+      29: areturn
+      30: astore_1
+      31: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+      34: aload_1
+      35: invokevirtual #178                // Method java/io/PrintStream.println:(Ljava/lang/Object;)V
+      38: aconst_null
+      39: areturn
+      40: astore_1
+      41: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+      44: aload_1
+      45: invokevirtual #178                // Method java/io/PrintStream.println:(Ljava/lang/Object;)V
+      48: aconst_null
+      49: areturn
+    Exception table:
+       from    to  target type
+           0    29    30   Class java/io/IOException
+           0    29    40   Class java/lang/ClassNotFoundException
+    LineNumberTable:
+      line 222: 0
+      line 223: 4
+      line 222: 12
+      line 224: 16
+      line 225: 24
+      line 226: 28
+      line 227: 30
+      line 228: 31
+      line 229: 38
+      line 230: 40
+      line 231: 41
+      line 232: 48
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      50     0 fileName   Ljava/lang/String;
+         16      14     1   ois   Ljava/io/ObjectInputStream;
+         24       6     2     e   Lat/ofai/music/util/EventList;
+         31       9     1     e   Ljava/io/IOException;
+         41       9     1     e   Ljava/lang/ClassNotFoundException;
+
+  public void writeMIDI(java.lang.String);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: aconst_null
+       3: invokevirtual #210                // Method writeMIDI:(Ljava/lang/String;Lat/ofai/music/util/EventList;)V
+       6: return
+    LineNumberTable:
+      line 237: 0
+      line 238: 6
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0       7     0  this   Lat/ofai/music/util/EventList;
+          0       7     1 fileName   Ljava/lang/String;
+
+  public void writeMIDI(java.lang.String, at.ofai.music.util.EventList);
+    Code:
+       0: aload_0
+       1: aload_2
+       2: invokevirtual #213                // Method toMIDI:(Lat/ofai/music/util/EventList;)Ljavax/sound/midi/Sequence;
+       5: iconst_1
+       6: new           #217                // class java/io/File
+       9: dup
+      10: aload_1
+      11: invokespecial #219                // Method java/io/File."<init>":(Ljava/lang/String;)V
+      14: invokestatic  #220                // Method javax/sound/midi/MidiSystem.write:(Ljavax/sound/midi/Sequence;ILjava/io/File;)I
+      17: pop
+      18: goto          48
+      21: astore_3
+      22: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+      25: new           #226                // class java/lang/StringBuilder
+      28: dup
+      29: ldc           #228                // String Error: Unable to write MIDI file
+      31: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+      34: aload_1
+      35: invokevirtual #231                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+      38: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+      41: invokevirtual #239                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+      44: aload_3
+      45: invokevirtual #241                // Method java/lang/Exception.printStackTrace:()V
+      48: return
+    Exception table:
+       from    to  target type
+           0    18    21   Class java/lang/Exception
+    LineNumberTable:
+      line 242: 0
+      line 243: 21
+      line 244: 22
+      line 245: 44
+      line 247: 48
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      49     0  this   Lat/ofai/music/util/EventList;
+          0      49     1 fileName   Ljava/lang/String;
+          0      49     2 pedal   Lat/ofai/music/util/EventList;
+         22      26     3     e   Ljava/lang/Exception;
+
+  public javax.sound.midi.Sequence toMIDI(at.ofai.music.util.EventList) throws javax.sound.midi.InvalidMidiDataException;
+    Code:
+       0: ldc           #251                // int 1000000
+       2: istore_2
+       3: new           #252                // class javax/sound/midi/Sequence
+       6: dup
+       7: fconst_0
+       8: sipush        1000
+      11: invokespecial #254                // Method javax/sound/midi/Sequence."<init>":(FI)V
+      14: astore_3
+      15: bipush        16
+      17: anewarray     #257                // class javax/sound/midi/Track
+      20: astore        4
+      22: aload         4
+      24: iconst_0
+      25: aload_3
+      26: invokevirtual #259                // Method javax/sound/midi/Sequence.createTrack:()Ljavax/sound/midi/Track;
+      29: aastore
+      30: new           #263                // class javax/sound/midi/MetaMessage
+      33: dup
+      34: invokespecial #265                // Method javax/sound/midi/MetaMessage."<init>":()V
+      37: astore        5
+      39: iconst_3
+      40: newarray       byte
+      42: astore        6
+      44: aload         6
+      46: iconst_0
+      47: bipush        15
+      49: bastore
+      50: aload         6
+      52: iconst_1
+      53: bipush        66
+      55: bastore
+      56: aload         6
+      58: iconst_2
+      59: bipush        64
+      61: bastore
+      62: aload         5
+      64: bipush        81
+      66: aload         6
+      68: iconst_3
+      69: invokevirtual #266                // Method javax/sound/midi/MetaMessage.setMessage:(I[BI)V
+      72: aload         4
+      74: iconst_0
+      75: aaload
+      76: new           #270                // class javax/sound/midi/MidiEvent
+      79: dup
+      80: aload         5
+      82: lconst_0
+      83: invokespecial #272                // Method javax/sound/midi/MidiEvent."<init>":(Ljavax/sound/midi/MidiMessage;J)V
+      86: invokevirtual #275                // Method javax/sound/midi/Track.add:(Ljavax/sound/midi/MidiEvent;)Z
+      89: pop
+      90: aload_0
+      91: getfield      #58                 // Field l:Ljava/util/LinkedList;
+      94: invokevirtual #125                // Method java/util/LinkedList.iterator:()Ljava/util/Iterator;
+      97: astore        8
+      99: goto          287
+     102: aload         8
+     104: invokeinterface #138,  1          // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+     109: checkcast     #74                 // class at/ofai/music/util/Event
+     112: astore        7
+     114: aload         7
+     116: getfield      #149                // Field at/ofai/music/util/Event.midiCommand:I
+     119: ifne          125
+     122: goto          297
+     125: aload         4
+     127: aload         7
+     129: getfield      #278                // Field at/ofai/music/util/Event.midiTrack:I
+     132: aaload
+     133: ifnonnull     148
+     136: aload         4
+     138: aload         7
+     140: getfield      #278                // Field at/ofai/music/util/Event.midiTrack:I
+     143: aload_3
+     144: invokevirtual #259                // Method javax/sound/midi/Sequence.createTrack:()Ljavax/sound/midi/Track;
+     147: aastore
+     148: new           #281                // class javax/sound/midi/ShortMessage
+     151: dup
+     152: invokespecial #283                // Method javax/sound/midi/ShortMessage."<init>":()V
+     155: astore        9
+     157: aload         9
+     159: aload         7
+     161: getfield      #149                // Field at/ofai/music/util/Event.midiCommand:I
+     164: aload         7
+     166: getfield      #284                // Field at/ofai/music/util/Event.midiChannel:I
+     169: aload         7
+     171: getfield      #287                // Field at/ofai/music/util/Event.midiPitch:I
+     174: aload         7
+     176: getfield      #290                // Field at/ofai/music/util/Event.midiVelocity:I
+     179: invokevirtual #293                // Method javax/sound/midi/ShortMessage.setMessage:(IIII)V
+     182: aload         4
+     184: aload         7
+     186: getfield      #278                // Field at/ofai/music/util/Event.midiTrack:I
+     189: aaload
+     190: new           #270                // class javax/sound/midi/MidiEvent
+     193: dup
+     194: aload         9
+     196: ldc2_w        #296                // double 1000.0d
+     199: aload         7
+     201: getfield      #141                // Field at/ofai/music/util/Event.keyDown:D
+     204: dmul
+     205: invokestatic  #298                // Method java/lang/Math.round:(D)J
+     208: invokespecial #272                // Method javax/sound/midi/MidiEvent."<init>":(Ljavax/sound/midi/MidiMessage;J)V
+     211: invokevirtual #275                // Method javax/sound/midi/Track.add:(Ljavax/sound/midi/MidiEvent;)Z
+     214: pop
+     215: aload         7
+     217: getfield      #149                // Field at/ofai/music/util/Event.midiCommand:I
+     220: sipush        144
+     223: if_icmpne     287
+     226: new           #281                // class javax/sound/midi/ShortMessage
+     229: dup
+     230: invokespecial #283                // Method javax/sound/midi/ShortMessage."<init>":()V
+     233: astore        9
+     235: aload         9
+     237: sipush        128
+     240: aload         7
+     242: getfield      #284                // Field at/ofai/music/util/Event.midiChannel:I
+     245: aload         7
+     247: getfield      #287                // Field at/ofai/music/util/Event.midiPitch:I
+     250: iconst_0
+     251: invokevirtual #293                // Method javax/sound/midi/ShortMessage.setMessage:(IIII)V
+     254: aload         4
+     256: aload         7
+     258: getfield      #278                // Field at/ofai/music/util/Event.midiTrack:I
+     261: aaload
+     262: new           #270                // class javax/sound/midi/MidiEvent
+     265: dup
+     266: aload         9
+     268: ldc2_w        #296                // double 1000.0d
+     271: aload         7
+     273: getfield      #304                // Field at/ofai/music/util/Event.keyUp:D
+     276: dmul
+     277: invokestatic  #298                // Method java/lang/Math.round:(D)J
+     280: invokespecial #272                // Method javax/sound/midi/MidiEvent."<init>":(Ljavax/sound/midi/MidiMessage;J)V
+     283: invokevirtual #275                // Method javax/sound/midi/Track.add:(Ljavax/sound/midi/MidiEvent;)Z
+     286: pop
+     287: aload         8
+     289: invokeinterface #144,  1          // InterfaceMethod java/util/Iterator.hasNext:()Z
+     294: ifne          102
+     297: aload_1
+     298: ifnull        501
+     301: aload_1
+     302: getfield      #58                 // Field l:Ljava/util/LinkedList;
+     305: invokevirtual #125                // Method java/util/LinkedList.iterator:()Ljava/util/Iterator;
+     308: astore        8
+     310: goto          491
+     313: aload         8
+     315: invokeinterface #138,  1          // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+     320: checkcast     #74                 // class at/ofai/music/util/Event
+     323: astore        7
+     325: aload         4
+     327: aload         7
+     329: getfield      #278                // Field at/ofai/music/util/Event.midiTrack:I
+     332: aaload
+     333: ifnonnull     348
+     336: aload         4
+     338: aload         7
+     340: getfield      #278                // Field at/ofai/music/util/Event.midiTrack:I
+     343: aload_3
+     344: invokevirtual #259                // Method javax/sound/midi/Sequence.createTrack:()Ljavax/sound/midi/Track;
+     347: aastore
+     348: new           #281                // class javax/sound/midi/ShortMessage
+     351: dup
+     352: invokespecial #283                // Method javax/sound/midi/ShortMessage."<init>":()V
+     355: astore        9
+     357: aload         9
+     359: aload         7
+     361: getfield      #149                // Field at/ofai/music/util/Event.midiCommand:I
+     364: aload         7
+     366: getfield      #284                // Field at/ofai/music/util/Event.midiChannel:I
+     369: aload         7
+     371: getfield      #287                // Field at/ofai/music/util/Event.midiPitch:I
+     374: aload         7
+     376: getfield      #290                // Field at/ofai/music/util/Event.midiVelocity:I
+     379: invokevirtual #293                // Method javax/sound/midi/ShortMessage.setMessage:(IIII)V
+     382: aload         4
+     384: aload         7
+     386: getfield      #278                // Field at/ofai/music/util/Event.midiTrack:I
+     389: aaload
+     390: new           #270                // class javax/sound/midi/MidiEvent
+     393: dup
+     394: aload         9
+     396: ldc2_w        #296                // double 1000.0d
+     399: aload         7
+     401: getfield      #141                // Field at/ofai/music/util/Event.keyDown:D
+     404: dmul
+     405: invokestatic  #298                // Method java/lang/Math.round:(D)J
+     408: invokespecial #272                // Method javax/sound/midi/MidiEvent."<init>":(Ljavax/sound/midi/MidiMessage;J)V
+     411: invokevirtual #275                // Method javax/sound/midi/Track.add:(Ljavax/sound/midi/MidiEvent;)Z
+     414: pop
+     415: aload         7
+     417: getfield      #149                // Field at/ofai/music/util/Event.midiCommand:I
+     420: sipush        144
+     423: if_icmpne     491
+     426: new           #281                // class javax/sound/midi/ShortMessage
+     429: dup
+     430: invokespecial #283                // Method javax/sound/midi/ShortMessage."<init>":()V
+     433: astore        9
+     435: aload         9
+     437: sipush        128
+     440: aload         7
+     442: getfield      #284                // Field at/ofai/music/util/Event.midiChannel:I
+     445: aload         7
+     447: getfield      #287                // Field at/ofai/music/util/Event.midiPitch:I
+     450: aload         7
+     452: getfield      #290                // Field at/ofai/music/util/Event.midiVelocity:I
+     455: invokevirtual #293                // Method javax/sound/midi/ShortMessage.setMessage:(IIII)V
+     458: aload         4
+     460: aload         7
+     462: getfield      #278                // Field at/ofai/music/util/Event.midiTrack:I
+     465: aaload
+     466: new           #270                // class javax/sound/midi/MidiEvent
+     469: dup
+     470: aload         9
+     472: ldc2_w        #296                // double 1000.0d
+     475: aload         7
+     477: getfield      #304                // Field at/ofai/music/util/Event.keyUp:D
+     480: dmul
+     481: invokestatic  #298                // Method java/lang/Math.round:(D)J
+     484: invokespecial #272                // Method javax/sound/midi/MidiEvent."<init>":(Ljavax/sound/midi/MidiMessage;J)V
+     487: invokevirtual #275                // Method javax/sound/midi/Track.add:(Ljavax/sound/midi/MidiEvent;)Z
+     490: pop
+     491: aload         8
+     493: invokeinterface #144,  1          // InterfaceMethod java/util/Iterator.hasNext:()Z
+     498: ifne          313
+     501: aload_3
+     502: areturn
+    LineNumberTable:
+      line 250: 0
+      line 251: 3
+      line 252: 15
+      line 253: 22
+      line 254: 30
+      line 255: 39
+      line 256: 44
+      line 257: 50
+      line 258: 56
+      line 259: 62
+      line 260: 72
+      line 261: 90
+      line 262: 114
+      line 263: 122
+      line 264: 125
+      line 265: 136
+      line 273: 148
+      line 274: 157
+      line 275: 169
+      line 274: 179
+      line 276: 182
+      line 277: 196
+      line 276: 211
+      line 278: 215
+      line 279: 226
+      line 280: 235
+      line 281: 254
+      line 261: 287
+      line 284: 297
+      line 287: 301
+      line 288: 325
+      line 289: 336
+      line 290: 348
+      line 291: 357
+      line 292: 369
+      line 291: 379
+      line 293: 382
+      line 294: 396
+      line 293: 411
+      line 295: 415
+      line 296: 426
+      line 297: 435
+      line 298: 445
+      line 297: 455
+      line 299: 458
+      line 300: 472
+      line 299: 487
+      line 287: 491
+      line 305: 501
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0     503     0  this   Lat/ofai/music/util/EventList;
+          0     503     1 pedal   Lat/ofai/music/util/EventList;
+          3     500     2 midiTempo   I
+         15     488     3     s   Ljavax/sound/midi/Sequence;
+         22     481     4    tr   [Ljavax/sound/midi/Track;
+         39     464     5    mm   Ljavax/sound/midi/MetaMessage;
+         44     459     6     b   [B
+        114     173     7     e   Lat/ofai/music/util/Event;
+        157     130     9    sm   Ljavax/sound/midi/ShortMessage;
+        325     166     7     e   Lat/ofai/music/util/Event;
+        357     134     9    sm   Ljavax/sound/midi/ShortMessage;
+
+  public static at.ofai.music.util.EventList readMidiFile(java.lang.String);
+    Code:
+       0: aload_0
+       1: iconst_0
+       2: invokestatic  #319                // Method readMidiFile:(Ljava/lang/String;I)Lat/ofai/music/util/EventList;
+       5: areturn
+    LineNumberTable:
+      line 309: 0
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0       6     0 fileName   Ljava/lang/String;
+
+  public static at.ofai.music.util.EventList readMidiFile(java.lang.String, int);
+    Code:
+       0: new           #1                  // class at/ofai/music/util/EventList
+       3: dup
+       4: invokespecial #63                 // Method "<init>":()V
+       7: astore_2
+       8: new           #217                // class java/io/File
+      11: dup
+      12: aload_0
+      13: invokespecial #219                // Method java/io/File."<init>":(Ljava/lang/String;)V
+      16: invokestatic  #322                // Method javax/sound/midi/MidiSystem.getSequence:(Ljava/io/File;)Ljavax/sound/midi/Sequence;
+      19: astore_3
+      20: goto          32
+      23: astore        4
+      25: aload         4
+      27: invokevirtual #241                // Method java/lang/Exception.printStackTrace:()V
+      30: aload_2
+      31: areturn
+      32: ldc2_w        #326                // double 500000.0d
+      35: dstore        4
+      37: dload         4
+      39: aload_3
+      40: invokevirtual #328                // Method javax/sound/midi/Sequence.getResolution:()I
+      43: i2d
+      44: ddiv
+      45: ldc2_w        #331                // double 1000000.0d
+      48: ddiv
+      49: dstore        6
+      51: sipush        128
+      54: bipush        16
+      56: multianewarray #333,  2           // class "[[Lat/ofai/music/util/Event;"
+      60: astore        8
+      62: aload_3
+      63: invokevirtual #335                // Method javax/sound/midi/Sequence.getTracks:()[Ljavax/sound/midi/Track;
+      66: astore        9
+      68: iconst_0
+      69: istore        10
+      71: goto          649
+      74: iload_1
+      75: iconst_1
+      76: iand
+      77: iconst_1
+      78: if_icmpne     84
+      81: goto          642
+      84: iconst_0
+      85: istore        11
+      87: goto          629
+      90: aload         9
+      92: iload         10
+      94: aaload
+      95: iload         11
+      97: invokevirtual #339                // Method javax/sound/midi/Track.get:(I)Ljavax/sound/midi/MidiEvent;
+     100: astore        12
+     102: aload         12
+     104: invokevirtual #343                // Method javax/sound/midi/MidiEvent.getMessage:()Ljavax/sound/midi/MidiMessage;
+     107: astore        13
+     109: aload         12
+     111: invokevirtual #347                // Method javax/sound/midi/MidiEvent.getTick:()J
+     114: l2d
+     115: dload         6
+     117: dmul
+     118: dstore        14
+     120: aload         13
+     122: invokevirtual #351                // Method javax/sound/midi/MidiMessage.getMessage:()[B
+     125: astore        16
+     127: aload         16
+     129: iconst_0
+     130: baload
+     131: bipush        15
+     133: iand
+     134: istore        17
+     136: aload         16
+     138: iconst_0
+     139: baload
+     140: sipush        240
+     143: iand
+     144: istore        18
+     146: iload         18
+     148: sipush        144
+     151: if_icmpne     342
+     154: aload         16
+     156: iconst_1
+     157: baload
+     158: bipush        127
+     160: iand
+     161: istore        19
+     163: aload         16
+     165: iconst_2
+     166: baload
+     167: bipush        127
+     169: iand
+     170: istore        20
+     172: aload         8
+     174: iload         19
+     176: aaload
+     177: iload         17
+     179: aaload
+     180: ifnull        292
+     183: iload         20
+     185: ifne          226
+     188: aload         8
+     190: iload         19
+     192: aaload
+     193: iload         17
+     195: aaload
+     196: dload         14
+     198: putfield      #304                // Field at/ofai/music/util/Event.keyUp:D
+     201: aload         8
+     203: iload         19
+     205: aaload
+     206: iload         17
+     208: aaload
+     209: dload         14
+     211: putfield      #356                // Field at/ofai/music/util/Event.pedalUp:D
+     214: aload         8
+     216: iload         19
+     218: aaload
+     219: iload         17
+     221: aconst_null
+     222: aastore
+     223: goto          626
+     226: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+     229: new           #226                // class java/lang/StringBuilder
+     232: dup
+     233: ldc_w         #359                // String Double note on: n=
+     236: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+     239: iload         19
+     241: invokevirtual #361                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     244: ldc_w         #364                // String  c=
+     247: invokevirtual #231                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+     250: iload         17
+     252: invokevirtual #361                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     255: ldc_w         #366                // String  t1=
+     258: invokevirtual #231                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+     261: aload         8
+     263: iload         19
+     265: aaload
+     266: iload         17
+     268: aaload
+     269: invokevirtual #368                // Method java/lang/StringBuilder.append:(Ljava/lang/Object;)Ljava/lang/StringBuilder;
+     272: ldc_w         #371                // String  t2=
+     275: invokevirtual #231                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+     278: dload         14
+     280: invokevirtual #373                // Method java/lang/StringBuilder.append:(D)Ljava/lang/StringBuilder;
+     283: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     286: invokevirtual #239                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+     289: goto          626
+     292: new           #74                 // class at/ofai/music/util/Event
+     295: dup
+     296: dload         14
+     298: dconst_0
+     299: dconst_0
+     300: iload         19
+     302: iload         20
+     304: ldc2_w        #376                // double -1.0d
+     307: ldc2_w        #376                // double -1.0d
+     310: iconst_0
+     311: sipush        144
+     314: iload         17
+     316: iload         10
+     318: invokespecial #378                // Method at/ofai/music/util/Event."<init>":(DDDIIDDIIII)V
+     321: astore        21
+     323: aload         8
+     325: iload         19
+     327: aaload
+     328: iload         17
+     330: aload         21
+     332: aastore
+     333: aload_2
+     334: aload         21
+     336: invokevirtual #76                 // Method add:(Lat/ofai/music/util/Event;)V
+     339: goto          626
+     342: iload         18
+     344: sipush        128
+     347: if_icmpne     397
+     350: aload         16
+     352: iconst_1
+     353: baload
+     354: bipush        127
+     356: iand
+     357: istore        19
+     359: aload         8
+     361: iload         19
+     363: aaload
+     364: iload         17
+     366: aaload
+     367: dload         14
+     369: putfield      #304                // Field at/ofai/music/util/Event.keyUp:D
+     372: aload         8
+     374: iload         19
+     376: aaload
+     377: iload         17
+     379: aaload
+     380: dload         14
+     382: putfield      #356                // Field at/ofai/music/util/Event.pedalUp:D
+     385: aload         8
+     387: iload         19
+     389: aaload
+     390: iload         17
+     392: aconst_null
+     393: aastore
+     394: goto          626
+     397: iload         18
+     399: sipush        240
+     402: if_icmpne     473
+     405: iload         17
+     407: bipush        15
+     409: if_icmpne     626
+     412: aload         16
+     414: iconst_1
+     415: baload
+     416: bipush        81
+     418: if_icmpne     626
+     421: aload         16
+     423: iconst_5
+     424: baload
+     425: sipush        255
+     428: iand
+     429: aload         16
+     431: iconst_4
+     432: baload
+     433: sipush        255
+     436: iand
+     437: bipush        8
+     439: ishl
+     440: ior
+     441: aload         16
+     443: iconst_3
+     444: baload
+     445: sipush        255
+     448: iand
+     449: bipush        16
+     451: ishl
+     452: ior
+     453: i2d
+     454: dstore        4
+     456: dload         4
+     458: aload_3
+     459: invokevirtual #328                // Method javax/sound/midi/Sequence.getResolution:()I
+     462: i2d
+     463: ddiv
+     464: ldc2_w        #331                // double 1000000.0d
+     467: ddiv
+     468: dstore        6
+     470: goto          626
+     473: aload         16
+     475: arraylength
+     476: iconst_3
+     477: if_icmple     534
+     480: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+     483: new           #226                // class java/lang/StringBuilder
+     486: dup
+     487: ldc_w         #381                // String midi message too long:
+     490: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+     493: aload         16
+     495: arraylength
+     496: invokevirtual #361                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     499: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     502: invokevirtual #239                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+     505: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+     508: new           #226                // class java/lang/StringBuilder
+     511: dup
+     512: ldc_w         #383                // String \tFirst byte:
+     515: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+     518: aload         16
+     520: iconst_0
+     521: baload
+     522: invokevirtual #361                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     525: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     528: invokevirtual #239                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+     531: goto          626
+     534: aload         16
+     536: iconst_0
+     537: baload
+     538: sipush        255
+     541: iand
+     542: istore        19
+     544: iconst_m1
+     545: istore        20
+     547: iconst_m1
+     548: istore        21
+     550: aload         16
+     552: arraylength
+     553: iconst_1
+     554: if_icmple     567
+     557: aload         16
+     559: iconst_1
+     560: baload
+     561: sipush        255
+     564: iand
+     565: istore        20
+     567: aload         16
+     569: arraylength
+     570: iconst_2
+     571: if_icmple     584
+     574: aload         16
+     576: iconst_2
+     577: baload
+     578: sipush        255
+     581: iand
+     582: istore        21
+     584: aload_2
+     585: new           #74                 // class at/ofai/music/util/Event
+     588: dup
+     589: dload         14
+     591: dload         14
+     593: ldc2_w        #376                // double -1.0d
+     596: iload         20
+     598: iload         21
+     600: ldc2_w        #376                // double -1.0d
+     603: ldc2_w        #376                // double -1.0d
+     606: iconst_0
+     607: iload         19
+     609: sipush        240
+     612: iand
+     613: iload         19
+     615: bipush        15
+     617: iand
+     618: iload         10
+     620: invokespecial #378                // Method at/ofai/music/util/Event."<init>":(DDDIIDDIIII)V
+     623: invokevirtual #76                 // Method add:(Lat/ofai/music/util/Event;)V
+     626: iinc          11, 1
+     629: iload         11
+     631: aload         9
+     633: iload         10
+     635: aaload
+     636: invokevirtual #385                // Method javax/sound/midi/Track.size:()I
+     639: if_icmplt     90
+     642: iinc          10, 1
+     645: iload_1
+     646: iconst_1
+     647: ishr
+     648: istore_1
+     649: iload         10
+     651: aload         9
+     653: arraylength
+     654: if_icmplt     74
+     657: iconst_0
+     658: istore        10
+     660: goto          746
+     663: iconst_0
+     664: istore        11
+     666: goto          736
+     669: aload         8
+     671: iload         10
+     673: aaload
+     674: iload         11
+     676: aaload
+     677: ifnull        733
+     680: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+     683: new           #226                // class java/lang/StringBuilder
+     686: dup
+     687: ldc_w         #386                // String Missing note off: n=
+     690: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+     693: aload         8
+     695: iload         10
+     697: aaload
+     698: iload         11
+     700: aaload
+     701: getfield      #287                // Field at/ofai/music/util/Event.midiPitch:I
+     704: invokevirtual #361                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     707: ldc_w         #388                // String  t=
+     710: invokevirtual #231                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+     713: aload         8
+     715: iload         10
+     717: aaload
+     718: iload         11
+     720: aaload
+     721: getfield      #141                // Field at/ofai/music/util/Event.keyDown:D
+     724: invokevirtual #373                // Method java/lang/StringBuilder.append:(D)Ljava/lang/StringBuilder;
+     727: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     730: invokevirtual #239                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+     733: iinc          11, 1
+     736: iload         11
+     738: bipush        16
+     740: if_icmplt     669
+     743: iinc          10, 1
+     746: iload         10
+     748: sipush        128
+     751: if_icmplt     663
+     754: aload_2
+     755: areturn
+    Exception table:
+       from    to  target type
+           8    20    23   Class java/lang/Exception
+    LineNumberTable:
+      line 313: 0
+      line 316: 8
+      line 317: 23
+      line 318: 25
+      line 319: 30
+      line 321: 32
+      line 322: 37
+      line 324: 51
+      line 325: 62
+      line 326: 68
+      line 327: 74
+      line 328: 81
+      line 329: 84
+      line 330: 90
+      line 331: 102
+      line 332: 109
+      line 333: 120
+      line 334: 127
+      line 335: 136
+      line 336: 146
+      line 337: 154
+      line 338: 163
+      line 339: 172
+      line 340: 183
+      line 341: 188
+      line 342: 201
+      line 343: 214
+      line 345: 226
+      line 346: 244
+      line 347: 255
+      line 348: 272
+      line 345: 286
+      line 350: 292
+      line 351: 310
+      line 350: 318
+      line 352: 323
+      line 353: 333
+      line 355: 342
+      line 356: 350
+      line 357: 359
+      line 358: 372
+      line 359: 385
+      line 360: 397
+      line 361: 405
+      line 362: 421
+      line 363: 429
+      line 362: 440
+      line 364: 441
+      line 362: 452
+      line 365: 456
+      line 369: 473
+      line 370: 480
+      line 371: 505
+      line 373: 534
+      line 374: 544
+      line 375: 547
+      line 376: 550
+      line 377: 557
+      line 378: 567
+      line 379: 574
+      line 380: 584
+      line 381: 607
+      line 380: 623
+      line 329: 626
+      line 326: 642
+      line 385: 657
+      line 386: 663
+      line 387: 669
+      line 388: 680
+      line 389: 693
+      line 390: 713
+      line 388: 730
+      line 386: 733
+      line 385: 743
+      line 391: 754
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0     756     0 fileName   Ljava/lang/String;
+          0     756     1 skipTrackFlag   I
+          8     748     2  list   Lat/ofai/music/util/EventList;
+         20       3     3     s   Ljavax/sound/midi/Sequence;
+         32     724     3     s   Ljavax/sound/midi/Sequence;
+         25       7     4     e   Ljava/lang/Exception;
+         37     719     4 midiTempo   D
+         51     705     6 tempoFactor   D
+         62     694     8 noteOns   [[Lat/ofai/music/util/Event;
+         68     688     9 tracks   [Ljavax/sound/midi/Track;
+         71     586    10     t   I
+         87     555    11     e   I
+        102     524    12    me   Ljavax/sound/midi/MidiEvent;
+        109     517    13    mm   Ljavax/sound/midi/MidiMessage;
+        120     506    14  time   D
+        127     499    16  mesg   [B
+        136     490    17 channel   I
+        146     480    18 command   I
+        163     179    19 pitch   I
+        172     170    20 velocity   I
+        323      16    21     n   Lat/ofai/music/util/Event;
+        359      38    19 pitch   I
+        544      82    19    b0   I
+        547      79    20    b1   I
+        550      76    21    b2   I
+        660      94    10 pitch   I
+        666      77    11 channel   I
+
+  public void print();
+    Code:
+       0: aload_0
+       1: getfield      #58                 // Field l:Ljava/util/LinkedList;
+       4: invokevirtual #125                // Method java/util/LinkedList.iterator:()Ljava/util/Iterator;
+       7: astore_1
+       8: goto          26
+      11: aload_1
+      12: invokeinterface #138,  1          // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+      17: checkcast     #74                 // class at/ofai/music/util/Event
+      20: getstatic     #50                 // Field flags:Lat/ofai/music/util/Flags;
+      23: invokevirtual #410                // Method at/ofai/music/util/Event.print:(Lat/ofai/music/util/Flags;)V
+      26: aload_1
+      27: invokeinterface #144,  1          // InterfaceMethod java/util/Iterator.hasNext:()Z
+      32: ifne          11
+      35: return
+    LineNumberTable:
+      line 395: 0
+      line 396: 11
+      line 395: 26
+      line 397: 35
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      36     0  this   Lat/ofai/music/util/EventList;
+          8      27     1     i   Ljava/util/Iterator;
+
+  public static void setTimingCorrection(double);
+    Code:
+       0: dload_0
+       1: dconst_0
+       2: dcmpl
+       3: iflt          10
+       6: iconst_1
+       7: goto          11
+      10: iconst_0
+      11: putstatic     #30                 // Field timingCorrection:Z
+      14: dload_0
+      15: putstatic     #32                 // Field timingDisplacement:D
+      18: return
+    LineNumberTable:
+      line 400: 0
+      line 401: 14
+      line 402: 18
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      19     0  corr   D
+
+  public static at.ofai.music.util.EventList readBeatsAsText(java.lang.String) throws java.lang.Exception;
+    Code:
+       0: new           #1                  // class at/ofai/music/util/EventList
+       3: dup
+       4: invokespecial #63                 // Method "<init>":()V
+       7: astore_1
+       8: new           #417                // class java/io/BufferedReader
+      11: dup
+      12: new           #419                // class java/io/FileReader
+      15: dup
+      16: aload_0
+      17: invokespecial #421                // Method java/io/FileReader."<init>":(Ljava/lang/String;)V
+      20: invokespecial #422                // Method java/io/BufferedReader."<init>":(Ljava/io/Reader;)V
+      23: astore_2
+      24: aload_2
+      25: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+      28: astore_3
+      29: aload_3
+      30: ldc_w         #428                // String ###
+      33: invokevirtual #430                // Method java/lang/String.startsWith:(Ljava/lang/String;)Z
+      36: ifeq          44
+      39: aload_0
+      40: invokestatic  #436                // Method readLabelFile:(Ljava/lang/String;)Lat/ofai/music/util/EventList;
+      43: areturn
+      44: iconst_0
+      45: istore        4
+      47: bipush        56
+      49: istore        5
+      51: bipush        80
+      53: istore        6
+      55: bipush        10
+      57: istore        7
+      59: iconst_0
+      60: istore        8
+      62: iconst_1
+      63: istore        9
+      65: goto          207
+      68: aload_3
+      69: bipush        44
+      71: invokevirtual #439                // Method java/lang/String.indexOf:(I)I
+      74: istore        10
+      76: iload         10
+      78: ifge          89
+      81: aload_3
+      82: bipush        32
+      84: invokevirtual #439                // Method java/lang/String.indexOf:(I)I
+      87: istore        10
+      89: dconst_0
+      90: dstore        11
+      92: iload         10
+      94: iflt          144
+      97: aload_3
+      98: iconst_0
+      99: iload         10
+     101: invokevirtual #443                // Method java/lang/String.substring:(II)Ljava/lang/String;
+     104: invokevirtual #447                // Method java/lang/String.trim:()Ljava/lang/String;
+     107: astore        13
+     109: aload         13
+     111: invokevirtual #450                // Method java/lang/String.length:()I
+     114: ifne          125
+     117: aload_2
+     118: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+     121: astore_3
+     122: goto          207
+     125: aload         13
+     127: invokestatic  #453                // Method java/lang/Double.parseDouble:(Ljava/lang/String;)D
+     130: dstore        11
+     132: aload_3
+     133: iload         10
+     135: iconst_1
+     136: iadd
+     137: invokevirtual #459                // Method java/lang/String.substring:(I)Ljava/lang/String;
+     140: astore_3
+     141: goto          170
+     144: aload_3
+     145: invokevirtual #447                // Method java/lang/String.trim:()Ljava/lang/String;
+     148: astore        13
+     150: aload         13
+     152: invokevirtual #450                // Method java/lang/String.length:()I
+     155: ifle          165
+     158: aload         13
+     160: invokestatic  #453                // Method java/lang/Double.parseDouble:(Ljava/lang/String;)D
+     163: dstore        11
+     165: aload_2
+     166: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+     169: astore_3
+     170: aload_1
+     171: new           #74                 // class at/ofai/music/util/Event
+     174: dup
+     175: dload         11
+     177: dload         11
+     179: dload         11
+     181: iload         5
+     183: iload         6
+     185: iinc          4, 1
+     188: iload         4
+     190: i2d
+     191: dconst_1
+     192: iload         9
+     194: sipush        144
+     197: iload         7
+     199: iload         8
+     201: invokespecial #378                // Method at/ofai/music/util/Event."<init>":(DDDIIDDIIII)V
+     204: invokevirtual #76                 // Method add:(Lat/ofai/music/util/Event;)V
+     207: aload_3
+     208: ifnonnull     68
+     211: aload_1
+     212: areturn
+    LineNumberTable:
+      line 405: 0
+      line 406: 8
+      line 407: 24
+      line 408: 29
+      line 409: 39
+      line 410: 44
+      line 411: 47
+      line 412: 51
+      line 413: 55
+      line 414: 59
+      line 415: 62
+      line 416: 65
+      line 417: 68
+      line 418: 76
+      line 419: 81
+      line 420: 89
+      line 421: 92
+      line 422: 97
+      line 423: 109
+      line 424: 117
+      line 425: 122
+      line 427: 125
+      line 428: 132
+      line 430: 144
+      line 431: 150
+      line 432: 158
+      line 433: 165
+      line 435: 170
+      line 436: 191
+      line 435: 204
+      line 416: 207
+      line 438: 211
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0     213     0 fileName   Ljava/lang/String;
+          8     205     1  list   Lat/ofai/music/util/EventList;
+         24     189     2 inputFile   Ljava/io/BufferedReader;
+         29     184     3     s   Ljava/lang/String;
+         47     166     4 beats   I
+         51     162     5 pitch   I
+         55     158     6   vol   I
+         59     154     7    ch   I
+         62     151     8 track   I
+         65     148     9    fl   I
+         76     131    10   ind   I
+         92     115    11  time   D
+        109      35    13   tmp   Ljava/lang/String;
+        150      20    13   tmp   Ljava/lang/String;
+
+  public static at.ofai.music.util.EventList readBeatTrackFile(java.lang.String) throws java.lang.Exception;
+    Code:
+       0: aload_0
+       1: ldc_w         #472                // String .tmf
+       4: invokevirtual #474                // Method java/lang/String.endsWith:(Ljava/lang/String;)Z
+       7: ifne          15
+      10: aload_0
+      11: invokestatic  #477                // Method readBeatsAsText:(Ljava/lang/String;)Lat/ofai/music/util/EventList;
+      14: areturn
+      15: new           #1                  // class at/ofai/music/util/EventList
+      18: dup
+      19: invokespecial #63                 // Method "<init>":()V
+      22: astore_1
+      23: new           #417                // class java/io/BufferedReader
+      26: dup
+      27: new           #419                // class java/io/FileReader
+      30: dup
+      31: aload_0
+      32: invokespecial #421                // Method java/io/FileReader."<init>":(Ljava/lang/String;)V
+      35: invokespecial #422                // Method java/io/BufferedReader."<init>":(Ljava/io/Reader;)V
+      38: astore_2
+      39: new           #479                // class at/ofai/music/util/Matcher
+      42: dup
+      43: aload_2
+      44: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+      47: invokespecial #481                // Method at/ofai/music/util/Matcher."<init>":(Ljava/lang/String;)V
+      50: astore_3
+      51: aload_3
+      52: ldc_w         #482                // String MFile
+      55: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+      58: ifne          72
+      61: new           #487                // class at/ofai/music/util/BTFileParseException
+      64: dup
+      65: ldc_w         #489                // String Header not found
+      68: invokespecial #491                // Method at/ofai/music/util/BTFileParseException."<init>":(Ljava/lang/String;)V
+      71: athrow
+      72: aload_3
+      73: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+      76: pop
+      77: aload_3
+      78: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+      81: istore        4
+      83: aload_3
+      84: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+      87: istore        5
+      89: ldc           #36                 // int 500000
+      91: istore        6
+      93: ldc2_w        #331                // double 1000000.0d
+      96: iload         6
+      98: i2d
+      99: ddiv
+     100: iload         5
+     102: i2d
+     103: dmul
+     104: dstore        7
+     106: iconst_1
+     107: istore        9
+     109: iconst_0
+     110: istore        10
+     112: iconst_0
+     113: istore        11
+     115: goto          461
+     118: aload_3
+     119: aload_2
+     120: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+     123: invokevirtual #495                // Method at/ofai/music/util/Matcher.set:(Ljava/lang/String;)V
+     126: iinc          9, 1
+     129: aload_3
+     130: ldc_w         #498                // String MTrk
+     133: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     136: ifne          150
+     139: new           #487                // class at/ofai/music/util/BTFileParseException
+     142: dup
+     143: ldc_w         #500                // String MTrk not found
+     146: invokespecial #491                // Method at/ofai/music/util/BTFileParseException."<init>":(Ljava/lang/String;)V
+     149: athrow
+     150: aload_3
+     151: aload_2
+     152: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+     155: invokevirtual #495                // Method at/ofai/music/util/Matcher.set:(Ljava/lang/String;)V
+     158: iinc          9, 1
+     161: goto          448
+     164: aload_3
+     165: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     168: i2d
+     169: dload         7
+     171: ddiv
+     172: dstore        12
+     174: aload_3
+     175: invokevirtual #502                // Method at/ofai/music/util/Matcher.trimSpace:()V
+     178: aload_3
+     179: ldc_w         #505                // String Tempo
+     182: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     185: ifeq          210
+     188: aload_3
+     189: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     192: istore        6
+     194: ldc2_w        #331                // double 1000000.0d
+     197: iload         6
+     199: i2d
+     200: ddiv
+     201: iload         5
+     203: i2d
+     204: dmul
+     205: dstore        7
+     207: goto          437
+     210: aload_3
+     211: ldc_w         #507                // String On
+     214: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     217: ifeq          390
+     220: aload_3
+     221: invokevirtual #502                // Method at/ofai/music/util/Matcher.trimSpace:()V
+     224: aload_3
+     225: ldc_w         #509                // String ch=
+     228: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     231: pop
+     232: aload_3
+     233: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     236: istore        14
+     238: aload_3
+     239: invokevirtual #502                // Method at/ofai/music/util/Matcher.trimSpace:()V
+     242: aload_3
+     243: ldc_w         #511                // String n=
+     246: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     249: ifne          260
+     252: aload_3
+     253: ldc_w         #513                // String note=
+     256: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     259: pop
+     260: aload_3
+     261: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     264: istore        15
+     266: aload_3
+     267: invokevirtual #502                // Method at/ofai/music/util/Matcher.trimSpace:()V
+     270: aload_3
+     271: ldc_w         #515                // String v=
+     274: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     277: ifne          288
+     280: aload_3
+     281: ldc_w         #517                // String vol=
+     284: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     287: pop
+     288: aload_3
+     289: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     292: istore        16
+     294: aload_3
+     295: aload_2
+     296: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+     299: invokevirtual #495                // Method at/ofai/music/util/Matcher.set:(Ljava/lang/String;)V
+     302: iinc          9, 1
+     305: aload_3
+     306: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     309: pop
+     310: aload_3
+     311: invokevirtual #502                // Method at/ofai/music/util/Matcher.trimSpace:()V
+     314: aload_3
+     315: ldc_w         #519                // String Off
+     318: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     321: pop
+     322: aload_3
+     323: bipush        118
+     325: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     328: aload_3
+     329: ldc_w         #525                // String ol
+     332: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     335: pop
+     336: aload_3
+     337: ldc_w         #527                // String =
+     340: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     343: pop
+     344: aload_3
+     345: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     348: istore        17
+     350: aload_1
+     351: new           #74                 // class at/ofai/music/util/Event
+     354: dup
+     355: dload         12
+     357: dload         12
+     359: dload         12
+     361: iload         15
+     363: iload         16
+     365: iinc          10, 1
+     368: iload         10
+     370: i2d
+     371: dconst_1
+     372: iload         17
+     374: sipush        144
+     377: iload         14
+     379: iload         11
+     381: invokespecial #378                // Method at/ofai/music/util/Event."<init>":(DDDIIDDIIII)V
+     384: invokevirtual #76                 // Method add:(Lat/ofai/music/util/Event;)V
+     387: goto          437
+     390: aload_3
+     391: ldc_w         #529                // String Meta TrkEnd
+     394: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     397: ifne          437
+     400: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+     403: new           #226                // class java/lang/StringBuilder
+     406: dup
+     407: ldc_w         #531                // String Unmatched text on line
+     410: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+     413: iload         9
+     415: invokevirtual #361                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     418: ldc_w         #533                // String :
+     421: invokevirtual #231                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+     424: aload_3
+     425: invokevirtual #535                // Method at/ofai/music/util/Matcher.get:()Ljava/lang/String;
+     428: invokevirtual #231                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+     431: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     434: invokevirtual #239                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+     437: aload_3
+     438: aload_2
+     439: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+     442: invokevirtual #495                // Method at/ofai/music/util/Matcher.set:(Ljava/lang/String;)V
+     445: iinc          9, 1
+     448: aload_3
+     449: ldc_w         #537                // String TrkEnd
+     452: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     455: ifeq          164
+     458: iinc          11, 1
+     461: iload         11
+     463: iload         4
+     465: if_icmplt     118
+     468: aload_1
+     469: areturn
+    LineNumberTable:
+      line 442: 0
+      line 443: 10
+      line 445: 15
+      line 446: 23
+      line 447: 39
+      line 448: 51
+      line 449: 61
+      line 450: 72
+      line 451: 77
+      line 452: 83
+      line 453: 89
+      line 454: 93
+      line 455: 106
+      line 456: 109
+      line 457: 112
+      line 458: 118
+      line 459: 126
+      line 460: 129
+      line 461: 139
+      line 462: 150
+      line 463: 158
+      line 464: 161
+      line 465: 164
+      line 466: 174
+      line 467: 178
+      line 468: 188
+      line 469: 194
+      line 470: 210
+      line 471: 220
+      line 472: 224
+      line 473: 232
+      line 474: 238
+      line 475: 242
+      line 476: 252
+      line 477: 260
+      line 478: 266
+      line 479: 270
+      line 480: 280
+      line 481: 288
+      line 482: 294
+      line 483: 302
+      line 484: 305
+      line 485: 310
+      line 486: 314
+      line 487: 322
+      line 488: 328
+      line 489: 336
+      line 490: 344
+      line 491: 350
+      line 492: 371
+      line 491: 384
+      line 493: 390
+      line 494: 400
+      line 495: 418
+      line 494: 434
+      line 497: 437
+      line 498: 445
+      line 464: 448
+      line 457: 458
+      line 501: 468
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0     470     0 fileName   Ljava/lang/String;
+         23     447     1  list   Lat/ofai/music/util/EventList;
+         39     431     2 inputFile   Ljava/io/BufferedReader;
+         51     419     3     s   Lat/ofai/music/util/Matcher;
+         83     387     4 tracks   I
+         89     381     5   div   I
+         93     377     6 tempo   I
+        106     364     7    tf   D
+        109     361     9 lineCount   I
+        112     358    10 beats   I
+        115     353    11 track   I
+        174     274    12  time   D
+        238     152    14    ch   I
+        266     124    15 pitch   I
+        294      96    16   vol   I
+        350      40    17 flags   I
+
+  public void writeBeatsAsText(java.lang.String) throws java.lang.Exception;
+    Code:
+       0: new           #179                // class java/io/PrintStream
+       3: dup
+       4: new           #217                // class java/io/File
+       7: dup
+       8: aload_1
+       9: invokespecial #219                // Method java/io/File."<init>":(Ljava/lang/String;)V
+      12: invokespecial #545                // Method java/io/PrintStream."<init>":(Ljava/io/File;)V
+      15: astore_2
+      16: bipush        10
+      18: istore_3
+      19: aload_1
+      20: ldc_w         #548                // String .csv
+      23: invokevirtual #474                // Method java/lang/String.endsWith:(Ljava/lang/String;)Z
+      26: ifeq          32
+      29: bipush        44
+      31: istore_3
+      32: aload_0
+      33: invokevirtual #550                // Method iterator:()Ljava/util/Iterator;
+      36: astore        4
+      38: goto          98
+      41: aload         4
+      43: invokeinterface #138,  1          // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+      48: checkcast     #74                 // class at/ofai/music/util/Event
+      51: astore        5
+      53: aload_2
+      54: ldc_w         #551                // String %5.3f%c
+      57: iconst_2
+      58: anewarray     #3                  // class java/lang/Object
+      61: dup
+      62: iconst_0
+      63: aload         5
+      65: getfield      #141                // Field at/ofai/music/util/Event.keyDown:D
+      68: invokestatic  #553                // Method java/lang/Double.valueOf:(D)Ljava/lang/Double;
+      71: aastore
+      72: dup
+      73: iconst_1
+      74: aload         4
+      76: invokeinterface #144,  1          // InterfaceMethod java/util/Iterator.hasNext:()Z
+      81: ifeq          88
+      84: iload_3
+      85: goto          90
+      88: bipush        10
+      90: invokestatic  #557                // Method java/lang/Character.valueOf:(C)Ljava/lang/Character;
+      93: aastore
+      94: invokevirtual #562                // Method java/io/PrintStream.printf:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;
+      97: pop
+      98: aload         4
+     100: invokeinterface #144,  1          // InterfaceMethod java/util/Iterator.hasNext:()Z
+     105: ifne          41
+     108: aload_2
+     109: invokevirtual #566                // Method java/io/PrintStream.close:()V
+     112: return
+    LineNumberTable:
+      line 506: 0
+      line 507: 16
+      line 508: 19
+      line 509: 29
+      line 510: 32
+      line 511: 41
+      line 512: 53
+      line 510: 98
+      line 514: 108
+      line 515: 112
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0     113     0  this   Lat/ofai/music/util/EventList;
+          0     113     1 fileName   Ljava/lang/String;
+         16      97     2   out   Ljava/io/PrintStream;
+         19      94     3 separator   C
+         38      70     4    it   Ljava/util/Iterator;
+         53      45     5     e   Lat/ofai/music/util/Event;
+
+  public void writeBeatTrackFile(java.lang.String) throws java.lang.Exception;
+    Code:
+       0: aload_1
+       1: ldc_w         #571                // String .txt
+       4: invokevirtual #474                // Method java/lang/String.endsWith:(Ljava/lang/String;)Z
+       7: ifne          20
+      10: aload_1
+      11: ldc_w         #548                // String .csv
+      14: invokevirtual #474                // Method java/lang/String.endsWith:(Ljava/lang/String;)Z
+      17: ifeq          28
+      20: aload_0
+      21: aload_1
+      22: invokevirtual #573                // Method writeBeatsAsText:(Ljava/lang/String;)V
+      25: goto          239
+      28: new           #179                // class java/io/PrintStream
+      31: dup
+      32: new           #217                // class java/io/File
+      35: dup
+      36: aload_1
+      37: invokespecial #219                // Method java/io/File."<init>":(Ljava/lang/String;)V
+      40: invokespecial #545                // Method java/io/PrintStream."<init>":(Ljava/io/File;)V
+      43: astore_2
+      44: aload_2
+      45: ldc_w         #575                // String MFile 0 1 500
+      48: invokevirtual #239                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+      51: aload_2
+      52: ldc_w         #498                // String MTrk
+      55: invokevirtual #239                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+      58: aload_2
+      59: ldc_w         #577                // String      0 Tempo 500000
+      62: invokevirtual #239                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+      65: iconst_0
+      66: istore_3
+      67: aload_0
+      68: invokevirtual #550                // Method iterator:()Ljava/util/Iterator;
+      71: astore        4
+      73: goto          206
+      76: aload         4
+      78: invokeinterface #138,  1          // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+      83: checkcast     #74                 // class at/ofai/music/util/Event
+      86: astore        5
+      88: ldc2_w        #296                // double 1000.0d
+      91: aload         5
+      93: getfield      #141                // Field at/ofai/music/util/Event.keyDown:D
+      96: dmul
+      97: invokestatic  #298                // Method java/lang/Math.round:(D)J
+     100: l2i
+     101: istore_3
+     102: aload_2
+     103: ldc_w         #579                // String %6d On   ch=%3d n=%3d v=%3d\n
+     106: iconst_4
+     107: anewarray     #3                  // class java/lang/Object
+     110: dup
+     111: iconst_0
+     112: iload_3
+     113: invokestatic  #581                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+     116: aastore
+     117: dup
+     118: iconst_1
+     119: aload         5
+     121: getfield      #284                // Field at/ofai/music/util/Event.midiChannel:I
+     124: invokestatic  #581                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+     127: aastore
+     128: dup
+     129: iconst_2
+     130: aload         5
+     132: getfield      #287                // Field at/ofai/music/util/Event.midiPitch:I
+     135: invokestatic  #581                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+     138: aastore
+     139: dup
+     140: iconst_3
+     141: aload         5
+     143: getfield      #290                // Field at/ofai/music/util/Event.midiVelocity:I
+     146: invokestatic  #581                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+     149: aastore
+     150: invokevirtual #562                // Method java/io/PrintStream.printf:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;
+     153: pop
+     154: aload_2
+     155: ldc_w         #586                // String %6d Off  ch=%3d n=%3d v=%3d\n
+     158: iconst_4
+     159: anewarray     #3                  // class java/lang/Object
+     162: dup
+     163: iconst_0
+     164: iload_3
+     165: invokestatic  #581                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+     168: aastore
+     169: dup
+     170: iconst_1
+     171: aload         5
+     173: getfield      #284                // Field at/ofai/music/util/Event.midiChannel:I
+     176: invokestatic  #581                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+     179: aastore
+     180: dup
+     181: iconst_2
+     182: aload         5
+     184: getfield      #287                // Field at/ofai/music/util/Event.midiPitch:I
+     187: invokestatic  #581                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+     190: aastore
+     191: dup
+     192: iconst_3
+     193: aload         5
+     195: getfield      #588                // Field at/ofai/music/util/Event.flags:I
+     198: invokestatic  #581                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+     201: aastore
+     202: invokevirtual #562                // Method java/io/PrintStream.printf:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;
+     205: pop
+     206: aload         4
+     208: invokeinterface #144,  1          // InterfaceMethod java/util/Iterator.hasNext:()Z
+     213: ifne          76
+     216: aload_2
+     217: ldc_w         #590                // String %6d Meta TrkEnd\nTrkEnd\n
+     220: iconst_1
+     221: anewarray     #3                  // class java/lang/Object
+     224: dup
+     225: iconst_0
+     226: iload_3
+     227: invokestatic  #581                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+     230: aastore
+     231: invokevirtual #562                // Method java/io/PrintStream.printf:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;
+     234: pop
+     235: aload_2
+     236: invokevirtual #566                // Method java/io/PrintStream.close:()V
+     239: return
+    LineNumberTable:
+      line 518: 0
+      line 519: 20
+      line 521: 28
+      line 522: 44
+      line 523: 51
+      line 524: 58
+      line 525: 65
+      line 526: 67
+      line 527: 76
+      line 528: 88
+      line 529: 102
+      line 530: 112
+      line 529: 149
+      line 531: 154
+      line 532: 164
+      line 531: 201
+      line 526: 206
+      line 534: 216
+      line 535: 235
+      line 537: 239
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0     240     0  this   Lat/ofai/music/util/EventList;
+          0     240     1 fileName   Ljava/lang/String;
+         44     195     2   out   Ljava/io/PrintStream;
+         67     172     3  time   I
+         73     143     4    it   Ljava/util/Iterator;
+         88     118     5     e   Lat/ofai/music/util/Event;
+
+  public static at.ofai.music.util.EventList readLabelFile(java.lang.String) throws java.lang.Exception;
+    Code:
+       0: new           #1                  // class at/ofai/music/util/EventList
+       3: dup
+       4: invokespecial #63                 // Method "<init>":()V
+       7: astore_1
+       8: new           #417                // class java/io/BufferedReader
+      11: dup
+      12: new           #419                // class java/io/FileReader
+      15: dup
+      16: aload_0
+      17: invokespecial #421                // Method java/io/FileReader."<init>":(Ljava/lang/String;)V
+      20: invokespecial #422                // Method java/io/BufferedReader."<init>":(Ljava/io/Reader;)V
+      23: astore_2
+      24: new           #479                // class at/ofai/music/util/Matcher
+      27: dup
+      28: aload_2
+      29: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+      32: invokespecial #481                // Method at/ofai/music/util/Matcher."<init>":(Ljava/lang/String;)V
+      35: astore_3
+      36: iconst_0
+      37: istore        4
+      39: iconst_0
+      40: istore        5
+      42: bipush        56
+      44: istore        6
+      46: bipush        80
+      48: istore        7
+      50: bipush        10
+      52: istore        8
+      54: iconst_0
+      55: istore        9
+      57: goto          215
+      60: aload_3
+      61: ldc_w         #592                // String #
+      64: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+      67: ifne          207
+      70: aload_3
+      71: invokevirtual #594                // Method at/ofai/music/util/Matcher.getDouble:()D
+      74: dstore        10
+      76: aload_3
+      77: invokevirtual #535                // Method at/ofai/music/util/Matcher.get:()Ljava/lang/String;
+      80: invokevirtual #447                // Method java/lang/String.trim:()Ljava/lang/String;
+      83: astore        12
+      85: aload         12
+      87: bipush        58
+      89: invokevirtual #439                // Method java/lang/String.indexOf:(I)I
+      92: istore        13
+      94: iconst_0
+      95: istore        14
+      97: iload         13
+      99: ifge          112
+     102: aload         12
+     104: invokevirtual #450                // Method java/lang/String.length:()I
+     107: istore        13
+     109: goto          126
+     112: aload         12
+     114: iload         13
+     116: iconst_1
+     117: iadd
+     118: invokevirtual #459                // Method java/lang/String.substring:(I)Ljava/lang/String;
+     121: invokestatic  #598                // Method java/lang/Integer.parseInt:(Ljava/lang/String;)I
+     124: istore        14
+     126: aload         12
+     128: iconst_0
+     129: iload         13
+     131: invokevirtual #443                // Method java/lang/String.substring:(II)Ljava/lang/String;
+     134: invokestatic  #598                // Method java/lang/Integer.parseInt:(Ljava/lang/String;)I
+     137: istore        15
+     139: iconst_2
+     140: istore        16
+     142: iload         15
+     144: iload         4
+     146: if_icmpeq     159
+     149: iload         16
+     151: iconst_4
+     152: ior
+     153: istore        16
+     155: iload         15
+     157: istore        4
+     159: new           #602                // class at/ofai/music/util/WormEvent
+     162: dup
+     163: dload         10
+     165: dload         10
+     167: dload         10
+     169: iload         6
+     171: iload         7
+     173: iinc          5, 1
+     176: iload         5
+     178: i2d
+     179: dconst_1
+     180: iload         16
+     182: sipush        144
+     185: iload         8
+     187: iload         9
+     189: invokespecial #604                // Method at/ofai/music/util/WormEvent."<init>":(DDDIIDDIIII)V
+     192: astore        17
+     194: aload         17
+     196: aload         12
+     198: putfield      #605                // Field at/ofai/music/util/WormEvent.label:Ljava/lang/String;
+     201: aload_1
+     202: aload         17
+     204: invokevirtual #76                 // Method add:(Lat/ofai/music/util/Event;)V
+     207: aload_3
+     208: aload_2
+     209: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+     212: invokevirtual #495                // Method at/ofai/music/util/Matcher.set:(Ljava/lang/String;)V
+     215: aload_3
+     216: invokevirtual #608                // Method at/ofai/music/util/Matcher.hasData:()Z
+     219: ifne          60
+     222: aload_1
+     223: areturn
+    LineNumberTable:
+      line 541: 0
+      line 542: 8
+      line 543: 24
+      line 544: 36
+      line 545: 39
+      line 546: 42
+      line 547: 46
+      line 548: 50
+      line 549: 54
+      line 550: 57
+      line 551: 60
+      line 552: 70
+      line 553: 76
+      line 554: 85
+      line 555: 94
+      line 556: 97
+      line 557: 102
+      line 559: 112
+      line 560: 126
+      line 561: 139
+      line 562: 142
+      line 563: 149
+      line 564: 155
+      line 566: 159
+      line 567: 173
+      line 566: 189
+      line 568: 194
+      line 569: 201
+      line 572: 207
+      line 550: 215
+      line 574: 222
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0     224     0 fileName   Ljava/lang/String;
+          8     216     1  list   Lat/ofai/music/util/EventList;
+         24     200     2 inputFile   Ljava/io/BufferedReader;
+         36     188     3     s   Lat/ofai/music/util/Matcher;
+         39     185     4 prevBar   I
+         42     182     5 beats   I
+         46     178     6 pitch   I
+         50     174     7   vol   I
+         54     170     8    ch   I
+         57     167     9 track   I
+         76     131    10  time   D
+         85     122    12 label   Ljava/lang/String;
+         94     113    13 colon   I
+         97     110    14  beat   I
+        139      68    15   bar   I
+        142      65    16 flags   I
+        194      13    17    ev   Lat/ofai/music/util/WormEvent;
+
+  public void writeLabelFile(java.lang.String) throws java.lang.Exception;
+    Code:
+       0: new           #179                // class java/io/PrintStream
+       3: dup
+       4: new           #217                // class java/io/File
+       7: dup
+       8: aload_1
+       9: invokespecial #219                // Method java/io/File."<init>":(Ljava/lang/String;)V
+      12: invokespecial #545                // Method java/io/PrintStream."<init>":(Ljava/io/File;)V
+      15: astore_2
+      16: aload_2
+      17: ldc_w         #617                // String ###Created automatically\n
+      20: iconst_0
+      21: anewarray     #3                  // class java/lang/Object
+      24: invokevirtual #562                // Method java/io/PrintStream.printf:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;
+      27: pop
+      28: aload_0
+      29: getfield      #58                 // Field l:Ljava/util/LinkedList;
+      32: invokevirtual #125                // Method java/util/LinkedList.iterator:()Ljava/util/Iterator;
+      35: astore        4
+      37: goto          83
+      40: aload         4
+      42: invokeinterface #138,  1          // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+      47: checkcast     #74                 // class at/ofai/music/util/Event
+      50: astore_3
+      51: aload_2
+      52: ldc_w         #619                // String %5.3f\t%s\n
+      55: iconst_2
+      56: anewarray     #3                  // class java/lang/Object
+      59: dup
+      60: iconst_0
+      61: aload_3
+      62: getfield      #141                // Field at/ofai/music/util/Event.keyDown:D
+      65: invokestatic  #553                // Method java/lang/Double.valueOf:(D)Ljava/lang/Double;
+      68: aastore
+      69: dup
+      70: iconst_1
+      71: aload_3
+      72: checkcast     #602                // class at/ofai/music/util/WormEvent
+      75: getfield      #605                // Field at/ofai/music/util/WormEvent.label:Ljava/lang/String;
+      78: aastore
+      79: invokevirtual #562                // Method java/io/PrintStream.printf:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;
+      82: pop
+      83: aload         4
+      85: invokeinterface #144,  1          // InterfaceMethod java/util/Iterator.hasNext:()Z
+      90: ifne          40
+      93: aload_2
+      94: invokevirtual #566                // Method java/io/PrintStream.close:()V
+      97: return
+    LineNumberTable:
+      line 578: 0
+      line 579: 16
+      line 580: 28
+      line 581: 51
+      line 580: 83
+      line 582: 93
+      line 583: 97
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      98     0  this   Lat/ofai/music/util/EventList;
+          0      98     1 fileName   Ljava/lang/String;
+         16      82     2   out   Ljava/io/PrintStream;
+         51      32     3    ev   Lat/ofai/music/util/Event;
+
+  public static at.ofai.music.util.EventList readWormFile(java.lang.String) throws java.lang.Exception;
+    Code:
+       0: new           #1                  // class at/ofai/music/util/EventList
+       3: dup
+       4: invokespecial #63                 // Method "<init>":()V
+       7: astore_1
+       8: new           #417                // class java/io/BufferedReader
+      11: dup
+      12: new           #419                // class java/io/FileReader
+      15: dup
+      16: aload_0
+      17: invokespecial #421                // Method java/io/FileReader."<init>":(Ljava/lang/String;)V
+      20: invokespecial #422                // Method java/io/BufferedReader."<init>":(Ljava/io/Reader;)V
+      23: astore_2
+      24: new           #479                // class at/ofai/music/util/Matcher
+      27: dup
+      28: aload_2
+      29: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+      32: invokespecial #481                // Method at/ofai/music/util/Matcher."<init>":(Ljava/lang/String;)V
+      35: astore_3
+      36: iconst_1
+      37: istore        4
+      39: aload_3
+      40: ldc_w         #622                // String WORM Version:
+      43: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+      46: ifne          60
+      49: new           #624                // class at/ofai/music/util/WormFileParseException
+      52: dup
+      53: ldc_w         #626                // String WORM format: header not found
+      56: invokespecial #628                // Method at/ofai/music/util/WormFileParseException."<init>":(Ljava/lang/String;)V
+      59: athrow
+      60: aload_3
+      61: invokevirtual #594                // Method at/ofai/music/util/Matcher.getDouble:()D
+      64: ldc2_w        #629                // double 1.01d
+      67: dcmpg
+      68: ifge          82
+      71: new           #624                // class at/ofai/music/util/WormFileParseException
+      74: dup
+      75: ldc_w         #631                // String WORM format: v1.0 not supported
+      78: invokespecial #628                // Method at/ofai/music/util/WormFileParseException."<init>":(Ljava/lang/String;)V
+      81: athrow
+      82: iconst_m1
+      83: istore        5
+      85: iconst_0
+      86: istore        6
+      88: aload_3
+      89: aload_2
+      90: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+      93: invokevirtual #495                // Method at/ofai/music/util/Matcher.set:(Ljava/lang/String;)V
+      96: iinc          4, 1
+      99: iload         5
+     101: ifne          137
+     104: aload_3
+     105: invokevirtual #608                // Method at/ofai/music/util/Matcher.hasData:()Z
+     108: ifeq          135
+     111: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+     114: new           #226                // class java/lang/StringBuilder
+     117: dup
+     118: ldc_w         #633                // String Ignoring trailing data past line
+     121: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+     124: iload         4
+     126: invokevirtual #361                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     129: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     132: invokevirtual #239                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+     135: aload_1
+     136: areturn
+     137: aload_3
+     138: invokevirtual #608                // Method at/ofai/music/util/Matcher.hasData:()Z
+     141: ifne          155
+     144: new           #624                // class at/ofai/music/util/WormFileParseException
+     147: dup
+     148: ldc_w         #635                // String Unexpected EOF
+     151: invokespecial #628                // Method at/ofai/music/util/WormFileParseException."<init>":(Ljava/lang/String;)V
+     154: athrow
+     155: iload         5
+     157: ifge          179
+     160: aload_3
+     161: ldc_w         #637                // String Length:
+     164: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     167: ifeq          88
+     170: aload_3
+     171: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     174: istore        5
+     176: goto          88
+     179: aload_3
+     180: invokevirtual #594                // Method at/ofai/music/util/Matcher.getDouble:()D
+     183: dstore        7
+     185: aload_3
+     186: invokevirtual #594                // Method at/ofai/music/util/Matcher.getDouble:()D
+     189: dstore        9
+     191: aload_3
+     192: invokevirtual #594                // Method at/ofai/music/util/Matcher.getDouble:()D
+     195: dstore        11
+     197: aload_3
+     198: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     201: istore        13
+     203: iload         13
+     205: iconst_1
+     206: iand
+     207: ifeq          213
+     210: iinc          6, 1
+     213: aload_1
+     214: new           #602                // class at/ofai/music/util/WormEvent
+     217: dup
+     218: dload         7
+     220: dload         9
+     222: dload         11
+     224: iload         6
+     226: i2d
+     227: iload         13
+     229: invokespecial #639                // Method at/ofai/music/util/WormEvent."<init>":(DDDDI)V
+     232: invokevirtual #76                 // Method add:(Lat/ofai/music/util/Event;)V
+     235: iinc          5, -1
+     238: goto          88
+    LineNumberTable:
+      line 586: 0
+      line 587: 8
+      line 588: 24
+      line 589: 36
+      line 590: 39
+      line 591: 49
+      line 592: 60
+      line 593: 71
+      line 594: 82
+      line 595: 85
+      line 597: 88
+      line 598: 96
+      line 599: 99
+      line 600: 104
+      line 601: 111
+      line 602: 124
+      line 601: 132
+      line 603: 135
+      line 604: 137
+      line 605: 144
+      line 606: 155
+      line 607: 160
+      line 608: 170
+      line 610: 179
+      line 611: 185
+      line 612: 191
+      line 613: 197
+      line 614: 203
+      line 615: 210
+      line 616: 213
+      line 617: 235
+      line 596: 238
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0     241     0 fileName   Ljava/lang/String;
+          8     233     1  list   Lat/ofai/music/util/EventList;
+         24     217     2 inputFile   Ljava/io/BufferedReader;
+         36     205     3     s   Lat/ofai/music/util/Matcher;
+         39     202     4 lineCount   I
+         85     156     5 dataCountDown   I
+         88     153     6  beat   I
+        185      53     7  time   D
+        191      47     9 tempo   D
+        197      41    11 loudness   D
+        203      35    13 flags   I
+
+  public static java.lang.String getAudioFileFromWormFile(java.lang.String);
+    Code:
+       0: aload_0
+       1: ldc_w         #646                // String AudioFile
+       4: invokestatic  #648                // Method getWormFileAttribute:(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+       7: areturn
+    LineNumberTable:
+      line 623: 0
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0       8     0 wormFile   Ljava/lang/String;
+
+  public static double getTrackLevelFromWormFile(java.lang.String);
+    Code:
+       0: aload_0
+       1: ldc_w         #654                // String TrackLevel
+       4: invokestatic  #648                // Method getWormFileAttribute:(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+       7: astore_1
+       8: aload_1
+       9: ldc_w         #656                // String /
+      12: invokevirtual #658                // Method java/lang/String.indexOf:(Ljava/lang/String;)I
+      15: istore_2
+      16: iload_2
+      17: iflt          41
+      20: aload_1
+      21: iconst_0
+      22: iload_2
+      23: invokevirtual #443                // Method java/lang/String.substring:(II)Ljava/lang/String;
+      26: invokestatic  #453                // Method java/lang/Double.parseDouble:(Ljava/lang/String;)D
+      29: aload_1
+      30: iload_2
+      31: iconst_1
+      32: iadd
+      33: invokevirtual #459                // Method java/lang/String.substring:(I)Ljava/lang/String;
+      36: invokestatic  #453                // Method java/lang/Double.parseDouble:(Ljava/lang/String;)D
+      39: ddiv
+      40: dreturn
+      41: aload_1
+      42: invokestatic  #453                // Method java/lang/Double.parseDouble:(Ljava/lang/String;)D
+      45: dreturn
+      46: astore_2
+      47: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+      50: new           #226                // class java/lang/StringBuilder
+      53: dup
+      54: ldc_w         #660                // String Error getting TrackLevel:\n
+      57: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+      60: aload_2
+      61: invokevirtual #368                // Method java/lang/StringBuilder.append:(Ljava/lang/Object;)Ljava/lang/StringBuilder;
+      64: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+      67: invokevirtual #239                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+      70: dconst_1
+      71: dreturn
+    Exception table:
+       from    to  target type
+           8    40    46   Class java/lang/Exception
+          41    45    46   Class java/lang/Exception
+    LineNumberTable:
+      line 627: 0
+      line 629: 8
+      line 630: 16
+      line 631: 20
+      line 632: 29
+      line 631: 39
+      line 634: 41
+      line 635: 46
+      line 636: 47
+      line 637: 70
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      72     0 wormFile   Ljava/lang/String;
+          8      64     1 level   Ljava/lang/String;
+         16      30     2     i   I
+         47      25     2     e   Ljava/lang/Exception;
+
+  public static java.lang.String getWormFileAttribute(java.lang.String, java.lang.String);
+    Code:
+       0: new           #417                // class java/io/BufferedReader
+       3: dup
+       4: new           #419                // class java/io/FileReader
+       7: dup
+       8: aload_0
+       9: invokespecial #421                // Method java/io/FileReader."<init>":(Ljava/lang/String;)V
+      12: invokespecial #422                // Method java/io/BufferedReader."<init>":(Ljava/io/Reader;)V
+      15: astore_2
+      16: aload_2
+      17: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+      20: astore_3
+      21: new           #226                // class java/lang/StringBuilder
+      24: dup
+      25: aload_1
+      26: invokestatic  #663                // Method java/lang/String.valueOf:(Ljava/lang/Object;)Ljava/lang/String;
+      29: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+      32: ldc_w         #666                // String :
+      35: invokevirtual #231                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+      38: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+      41: astore_1
+      42: goto          70
+      45: aload_3
+      46: aload_1
+      47: invokevirtual #430                // Method java/lang/String.startsWith:(Ljava/lang/String;)Z
+      50: ifeq          65
+      53: aload_3
+      54: aload_1
+      55: invokevirtual #450                // Method java/lang/String.length:()I
+      58: invokevirtual #459                // Method java/lang/String.substring:(I)Ljava/lang/String;
+      61: invokevirtual #447                // Method java/lang/String.trim:()Ljava/lang/String;
+      64: areturn
+      65: aload_2
+      66: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+      69: astore_3
+      70: aload_3
+      71: ifnonnull     45
+      74: goto          85
+      77: astore_2
+      78: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+      81: aload_2
+      82: invokevirtual #178                // Method java/io/PrintStream.println:(Ljava/lang/Object;)V
+      85: aconst_null
+      86: areturn
+    Exception table:
+       from    to  target type
+           0    64    77   Class java/lang/Exception
+          65    74    77   Class java/lang/Exception
+    LineNumberTable:
+      line 643: 0
+      line 644: 16
+      line 645: 21
+      line 646: 42
+      line 647: 45
+      line 648: 53
+      line 649: 65
+      line 646: 70
+      line 651: 77
+      line 652: 78
+      line 654: 85
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      87     0 wormFile   Ljava/lang/String;
+          0      87     1  attr   Ljava/lang/String;
+         16      61     2     r   Ljava/io/BufferedReader;
+         21      56     3  line   Ljava/lang/String;
+         78       7     2     e   Ljava/lang/Exception;
+
+  public static at.ofai.music.util.EventList readMatchFile(java.lang.String) throws java.lang.Exception;
+    Code:
+       0: new           #1                  // class at/ofai/music/util/EventList
+       3: dup
+       4: invokespecial #63                 // Method "<init>":()V
+       7: astore_1
+       8: getstatic     #30                 // Field timingCorrection:Z
+      11: istore_2
+      12: new           #417                // class java/io/BufferedReader
+      15: dup
+      16: new           #419                // class java/io/FileReader
+      19: dup
+      20: aload_0
+      21: invokespecial #421                // Method java/io/FileReader."<init>":(Ljava/lang/String;)V
+      24: invokespecial #422                // Method java/io/BufferedReader."<init>":(Ljava/io/Reader;)V
+      27: astore        7
+      29: dconst_1
+      30: dstore        8
+      32: iconst_1
+      33: istore        23
+      35: new           #479                // class at/ofai/music/util/Matcher
+      38: dup
+      39: aload         7
+      41: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+      44: invokespecial #481                // Method at/ofai/music/util/Matcher."<init>":(Ljava/lang/String;)V
+      47: astore        24
+      49: goto          1239
+      52: iconst_0
+      53: istore_3
+      54: ldc2_w        #672                // double NaNd
+      57: dstore        16
+      59: ldc2_w        #674                // double NaNd
+      62: dstore        18
+      64: aload         24
+      66: ldc_w         #676                // String info(
+      69: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+      72: ifeq          204
+      75: aload         24
+      77: ldc_w         #678                // String timeSignature,
+      80: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+      83: ifeq          110
+      86: aload         24
+      88: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+      91: istore        4
+      93: aload         24
+      95: bipush        47
+      97: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     100: aload         24
+     102: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     105: istore        5
+     107: goto          193
+     110: aload         24
+     112: ldc_w         #680                // String beatSubdivision,
+     115: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     118: ifeq          131
+     121: aload         24
+     123: bipush        93
+     125: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     128: goto          193
+     131: aload         24
+     133: ldc_w         #682                // String matchFileVersion,
+     136: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     139: ifeq          152
+     142: aload         24
+     144: invokevirtual #594                // Method at/ofai/music/util/Matcher.getDouble:()D
+     147: dstore        8
+     149: goto          193
+     152: aload         24
+     154: ldc_w         #684                // String midiClockUnits,
+     157: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     160: ifeq          174
+     163: aload         24
+     165: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     168: putstatic     #34                 // Field clockUnits:I
+     171: goto          193
+     174: aload         24
+     176: ldc_w         #686                // String midiClockRate,
+     179: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     182: ifeq          193
+     185: aload         24
+     187: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     190: putstatic     #37                 // Field clockRate:I
+     193: aload         24
+     195: ldc_w         #688                // String %
+     198: invokevirtual #495                // Method at/ofai/music/util/Matcher.set:(Ljava/lang/String;)V
+     201: goto          626
+     204: aload         24
+     206: ldc_w         #690                // String snote(
+     209: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     212: ifeq          464
+     215: aload         24
+     217: bipush        44
+     219: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     222: aload         24
+     224: bipush        93
+     226: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     229: aload         24
+     231: bipush        44
+     233: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     236: aload         24
+     238: bipush        44
+     240: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     243: aload         24
+     245: bipush        44
+     247: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     250: aload         24
+     252: ldc_w         #692                // String 0
+     255: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     258: istore        25
+     260: aload         24
+     262: bipush        44
+     264: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     267: aload         24
+     269: bipush        44
+     271: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     274: aload         24
+     276: invokevirtual #594                // Method at/ofai/music/util/Matcher.getDouble:()D
+     279: dstore        16
+     281: goto          315
+     284: astore        26
+     286: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+     289: new           #226                // class java/lang/StringBuilder
+     292: dup
+     293: ldc_w         #694                // String Bad beat number on line
+     296: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+     299: iload         23
+     301: invokevirtual #361                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     304: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     307: invokevirtual #239                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+     310: ldc2_w        #696                // double NaNd
+     313: dstore        16
+     315: dload         16
+     317: dload         16
+     319: invokestatic  #698                // Method java/lang/Math.rint:(D)D
+     322: dcmpl
+     323: ifne          330
+     326: iconst_1
+     327: goto          331
+     330: iconst_0
+     331: iload         25
+     333: if_icmpeq     360
+     336: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+     339: new           #226                // class java/lang/StringBuilder
+     342: dup
+     343: ldc_w         #702                // String Inconsistent beats on line
+     346: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+     349: iload         23
+     351: invokevirtual #361                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     354: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     357: invokevirtual #239                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+     360: aload         24
+     362: bipush        44
+     364: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     367: aload         24
+     369: invokevirtual #594                // Method at/ofai/music/util/Matcher.getDouble:()D
+     372: dload         16
+     374: dsub
+     375: dstore        18
+     377: goto          411
+     380: astore        26
+     382: getstatic     #172                // Field java/lang/System.err:Ljava/io/PrintStream;
+     385: new           #226                // class java/lang/StringBuilder
+     388: dup
+     389: ldc_w         #704                // String Bad duration on line
+     392: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+     395: iload         23
+     397: invokevirtual #361                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     400: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     403: invokevirtual #239                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+     406: ldc2_w        #706                // double NaNd
+     409: dstore        18
+     411: aload         24
+     413: bipush        44
+     415: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     418: aload         24
+     420: bipush        91
+     422: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     425: aload         24
+     427: invokevirtual #708                // Method at/ofai/music/util/Matcher.getString:()Ljava/lang/String;
+     430: astore        6
+     432: iload_3
+     433: getstatic     #50                 // Field flags:Lat/ofai/music/util/Flags;
+     436: aload         6
+     438: invokevirtual #711                // Method at/ofai/music/util/Flags.getFlag:(Ljava/lang/String;)I
+     441: ior
+     442: istore_3
+     443: aload         24
+     445: ldc_w         #714                // String ,
+     448: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     451: ifne          425
+     454: aload         24
+     456: bipush        45
+     458: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     461: goto          626
+     464: aload         24
+     466: ldc_w         #716                // String trill(
+     469: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     472: ifeq          497
+     475: iload_3
+     476: getstatic     #50                 // Field flags:Lat/ofai/music/util/Flags;
+     479: ldc_w         #718                // String trill
+     482: invokevirtual #711                // Method at/ofai/music/util/Flags.getFlag:(Ljava/lang/String;)I
+     485: ior
+     486: istore_3
+     487: aload         24
+     489: bipush        45
+     491: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     494: goto          626
+     497: aload         24
+     499: ldc_w         #720                // String ornament(
+     502: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     505: ifeq          530
+     508: iload_3
+     509: getstatic     #50                 // Field flags:Lat/ofai/music/util/Flags;
+     512: ldc_w         #722                // String ornament
+     515: invokevirtual #711                // Method at/ofai/music/util/Flags.getFlag:(Ljava/lang/String;)I
+     518: ior
+     519: istore_3
+     520: aload         24
+     522: bipush        45
+     524: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     527: goto          626
+     530: aload         24
+     532: ldc_w         #724                // String trailing_played_note-
+     535: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     538: ifne          574
+     541: aload         24
+     543: ldc_w         #726                // String hammer_bounce-
+     546: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     549: ifne          574
+     552: aload         24
+     554: ldc_w         #728                // String no_score_note-
+     557: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     560: ifne          574
+     563: aload         24
+     565: ldc_w         #730                // String insertion-
+     568: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     571: ifeq          589
+     574: iload_3
+     575: getstatic     #50                 // Field flags:Lat/ofai/music/util/Flags;
+     578: ldc_w         #732                // String unscored
+     581: invokevirtual #711                // Method at/ofai/music/util/Flags.getFlag:(Ljava/lang/String;)I
+     584: ior
+     585: istore_3
+     586: goto          626
+     589: aload         24
+     591: ldc_w         #688                // String %
+     594: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     597: ifne          626
+     600: new           #734                // class at/ofai/music/util/MatchFileParseException
+     603: dup
+     604: new           #226                // class java/lang/StringBuilder
+     607: dup
+     608: ldc_w         #736                // String error 4; line
+     611: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+     614: iload         23
+     616: invokevirtual #361                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     619: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     622: invokespecial #738                // Method at/ofai/music/util/MatchFileParseException."<init>":(Ljava/lang/String;)V
+     625: athrow
+     626: aload         24
+     628: ldc_w         #739                // String note(
+     631: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+     634: ifeq          1156
+     637: aload         24
+     639: bipush        91
+     641: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     644: aload         24
+     646: invokevirtual #708                // Method at/ofai/music/util/Matcher.getString:()Ljava/lang/String;
+     649: astore        25
+     651: aload         25
+     653: iconst_0
+     654: invokevirtual #741                // Method java/lang/String.charAt:(I)C
+     657: invokestatic  #745                // Method java/lang/Character.toUpperCase:(C)C
+     660: tableswitch   { // 65 to 71
+                    65: 704
+                    66: 711
+                    67: 718
+                    68: 724
+                    69: 730
+                    70: 736
+                    71: 742
+               default: 749
+          }
+     704: bipush        9
+     706: istore        21
+     708: goto          775
+     711: bipush        11
+     713: istore        21
+     715: goto          775
+     718: iconst_0
+     719: istore        21
+     721: goto          775
+     724: iconst_2
+     725: istore        21
+     727: goto          775
+     730: iconst_4
+     731: istore        21
+     733: goto          775
+     736: iconst_5
+     737: istore        21
+     739: goto          775
+     742: bipush        7
+     744: istore        21
+     746: goto          775
+     749: new           #734                // class at/ofai/music/util/MatchFileParseException
+     752: dup
+     753: new           #226                // class java/lang/StringBuilder
+     756: dup
+     757: ldc_w         #749                // String Bad note on line
+     760: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+     763: iload         23
+     765: invokevirtual #361                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     768: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     771: invokespecial #738                // Method at/ofai/music/util/MatchFileParseException."<init>":(Ljava/lang/String;)V
+     774: athrow
+     775: aload         24
+     777: bipush        44
+     779: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     782: aload         24
+     784: invokevirtual #708                // Method at/ofai/music/util/Matcher.getString:()Ljava/lang/String;
+     787: astore        26
+     789: iconst_0
+     790: istore        27
+     792: goto          880
+     795: aload         26
+     797: iload         27
+     799: invokevirtual #741                // Method java/lang/String.charAt:(I)C
+     802: lookupswitch  { // 3
+                    35: 836
+                    98: 842
+                   110: 848
+               default: 851
+          }
+     836: iinc          21, 1
+     839: goto          877
+     842: iinc          21, -1
+     845: goto          877
+     848: goto          877
+     851: new           #734                // class at/ofai/music/util/MatchFileParseException
+     854: dup
+     855: new           #226                // class java/lang/StringBuilder
+     858: dup
+     859: ldc_w         #751                // String error 5
+     862: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+     865: iload         23
+     867: invokevirtual #361                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     870: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     873: invokespecial #738                // Method at/ofai/music/util/MatchFileParseException."<init>":(Ljava/lang/String;)V
+     876: athrow
+     877: iinc          27, 1
+     880: iload         27
+     882: aload         26
+     884: invokevirtual #450                // Method java/lang/String.length:()I
+     887: if_icmplt     795
+     890: aload         24
+     892: bipush        44
+     894: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     897: aload         24
+     899: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     902: istore        22
+     904: iload         21
+     906: bipush        12
+     908: iload         22
+     910: imul
+     911: iadd
+     912: istore        21
+     914: aload         24
+     916: bipush        44
+     918: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     921: aload         24
+     923: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     926: i2d
+     927: dstore        10
+     929: aload         24
+     931: bipush        44
+     933: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     936: aload         24
+     938: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     941: i2d
+     942: dstore        12
+     944: dload         8
+     946: dconst_1
+     947: dcmpl
+     948: ifle          969
+     951: aload         24
+     953: bipush        44
+     955: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     958: aload         24
+     960: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     963: i2d
+     964: dstore        14
+     966: goto          973
+     969: dload         12
+     971: dstore        14
+     973: aload         24
+     975: bipush        44
+     977: invokevirtual #521                // Method at/ofai/music/util/Matcher.skip:(C)V
+     980: aload         24
+     982: invokevirtual #492                // Method at/ofai/music/util/Matcher.getInt:()I
+     985: istore        20
+     987: dload         10
+     989: getstatic     #34                 // Field clockUnits:I
+     992: i2d
+     993: ldc2_w        #331                // double 1000000.0d
+     996: dmul
+     997: getstatic     #37                 // Field clockRate:I
+    1000: i2d
+    1001: ddiv
+    1002: ddiv
+    1003: dstore        10
+    1005: dload         12
+    1007: getstatic     #34                 // Field clockUnits:I
+    1010: i2d
+    1011: ldc2_w        #331                // double 1000000.0d
+    1014: dmul
+    1015: getstatic     #37                 // Field clockRate:I
+    1018: i2d
+    1019: ddiv
+    1020: ddiv
+    1021: dstore        12
+    1023: dload         14
+    1025: getstatic     #34                 // Field clockUnits:I
+    1028: i2d
+    1029: ldc2_w        #331                // double 1000000.0d
+    1032: dmul
+    1033: getstatic     #37                 // Field clockRate:I
+    1036: i2d
+    1037: ddiv
+    1038: ddiv
+    1039: dstore        14
+    1041: getstatic     #30                 // Field timingCorrection:Z
+    1044: ifeq          1086
+    1047: iload_2
+    1048: ifeq          1062
+    1051: dload         10
+    1053: getstatic     #32                 // Field timingDisplacement:D
+    1056: dsub
+    1057: putstatic     #32                 // Field timingDisplacement:D
+    1060: iconst_0
+    1061: istore_2
+    1062: dload         10
+    1064: getstatic     #32                 // Field timingDisplacement:D
+    1067: dsub
+    1068: dstore        10
+    1070: dload         12
+    1072: getstatic     #32                 // Field timingDisplacement:D
+    1075: dsub
+    1076: dstore        12
+    1078: dload         14
+    1080: getstatic     #32                 // Field timingDisplacement:D
+    1083: dsub
+    1084: dstore        14
+    1086: getstatic     #50                 // Field flags:Lat/ofai/music/util/Flags;
+    1089: ldc_w         #753                // String s
+    1092: invokevirtual #711                // Method at/ofai/music/util/Flags.getFlag:(Ljava/lang/String;)I
+    1095: istore        27
+    1097: iload_3
+    1098: iload         27
+    1100: iand
+    1101: ifeq          1110
+    1104: getstatic     #41                 // Field noMelody:Z
+    1107: ifeq          1123
+    1110: iload_3
+    1111: iload         27
+    1113: iand
+    1114: ifne          1226
+    1117: getstatic     #43                 // Field onlyMelody:Z
+    1120: ifne          1226
+    1123: new           #74                 // class at/ofai/music/util/Event
+    1126: dup
+    1127: dload         10
+    1129: dload         12
+    1131: dload         14
+    1133: iload         21
+    1135: iload         20
+    1137: dload         16
+    1139: dload         18
+    1141: iload_3
+    1142: invokespecial #754                // Method at/ofai/music/util/Event."<init>":(DDDIIDDI)V
+    1145: astore        28
+    1147: aload_1
+    1148: aload         28
+    1150: invokevirtual #76                 // Method add:(Lat/ofai/music/util/Event;)V
+    1153: goto          1226
+    1156: aload         24
+    1158: ldc_w         #757                // String no_played_note.
+    1161: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+    1164: ifne          1226
+    1167: aload         24
+    1169: ldc_w         #759                // String trailing_score_note.
+    1172: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+    1175: ifne          1226
+    1178: aload         24
+    1180: ldc_w         #761                // String deletion.
+    1183: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+    1186: ifne          1226
+    1189: aload         24
+    1191: ldc_w         #688                // String %
+    1194: invokevirtual #484                // Method at/ofai/music/util/Matcher.matchString:(Ljava/lang/String;)Z
+    1197: ifne          1226
+    1200: new           #734                // class at/ofai/music/util/MatchFileParseException
+    1203: dup
+    1204: new           #226                // class java/lang/StringBuilder
+    1207: dup
+    1208: ldc_w         #763                // String error 6; line
+    1211: invokespecial #230                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+    1214: iload         23
+    1216: invokevirtual #361                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+    1219: invokevirtual #235                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+    1222: invokespecial #738                // Method at/ofai/music/util/MatchFileParseException."<init>":(Ljava/lang/String;)V
+    1225: athrow
+    1226: aload         24
+    1228: aload         7
+    1230: invokevirtual #425                // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+    1233: invokevirtual #495                // Method at/ofai/music/util/Matcher.set:(Ljava/lang/String;)V
+    1236: iinc          23, 1
+    1239: aload         24
+    1241: invokevirtual #608                // Method at/ofai/music/util/Matcher.hasData:()Z
+    1244: ifne          52
+    1247: aload_1
+    1248: areturn
+    Exception table:
+       from    to  target type
+         274   281   284   Class java/lang/NumberFormatException
+         367   377   380   Class java/lang/NumberFormatException
+    LineNumberTable:
+      line 658: 0
+      line 659: 8
+      line 662: 12
+      line 663: 29
+      line 666: 32
+      line 667: 35
+      line 668: 49
+      line 669: 52
+      line 670: 54
+      line 671: 59
+      line 673: 64
+      line 674: 75
+      line 675: 86
+      line 677: 93
+      line 678: 100
+      line 680: 110
+      line 686: 121
+      line 687: 131
+      line 688: 142
+      line 689: 152
+      line 690: 163
+      line 691: 174
+      line 692: 185
+      line 694: 193
+      line 695: 204
+      line 696: 215
+      line 697: 222
+      line 698: 229
+      line 699: 236
+      line 700: 243
+      line 701: 250
+      line 702: 260
+      line 703: 267
+      line 705: 274
+      line 706: 284
+      line 707: 286
+      line 708: 310
+      line 710: 315
+      line 711: 336
+      line 712: 360
+      line 714: 367
+      line 715: 380
+      line 716: 382
+      line 717: 406
+      line 719: 411
+      line 720: 418
+      line 722: 425
+      line 723: 432
+      line 724: 443
+      line 721: 451
+      line 725: 454
+      line 726: 464
+      line 727: 475
+      line 728: 487
+      line 729: 497
+      line 730: 508
+      line 731: 520
+      line 732: 530
+      line 733: 541
+      line 734: 552
+      line 735: 563
+      line 736: 574
+      line 737: 589
+      line 738: 600
+      line 741: 626
+      line 742: 637
+      line 743: 644
+      line 744: 651
+      line 745: 704
+      line 746: 711
+      line 747: 718
+      line 748: 724
+      line 749: 730
+      line 750: 736
+      line 751: 742
+      line 752: 749
+      line 753: 753
+      line 752: 771
+      line 755: 775
+      line 756: 782
+      line 757: 789
+      line 758: 795
+      line 759: 836
+      line 760: 842
+      line 761: 848
+      line 762: 851
+      line 763: 865
+      line 762: 873
+      line 757: 877
+      line 766: 890
+      line 767: 897
+      line 768: 904
+      line 769: 914
+      line 770: 921
+      line 771: 929
+      line 772: 936
+      line 773: 944
+      line 774: 951
+      line 775: 958
+      line 777: 969
+      line 778: 973
+      line 779: 980
+      line 780: 987
+      line 781: 1005
+      line 782: 1023
+      line 783: 1041
+      line 784: 1047
+      line 785: 1051
+      line 786: 1060
+      line 788: 1062
+      line 789: 1070
+      line 790: 1078
+      line 792: 1086
+      line 793: 1097
+      line 794: 1110
+      line 795: 1123
+      line 796: 1137
+      line 795: 1142
+      line 797: 1147
+      line 799: 1156
+      line 800: 1167
+      line 801: 1178
+      line 802: 1189
+      line 803: 1200
+      line 804: 1226
+      line 805: 1236
+      line 668: 1239
+      line 807: 1247
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0    1249     0 fileName   Ljava/lang/String;
+          8    1241     1  list   Lat/ofai/music/util/EventList;
+         12    1237     2 startNote   Z
+         54    1185     3 eventFlags   I
+         93      17     4 numerator   I
+        107       3     5 denominator   I
+        432      32     6 element   Ljava/lang/String;
+         29    1220     7 inputFile   Ljava/io/BufferedReader;
+         32    1217     8 versionNumber   D
+        929     227    10 onset   D
+        944     212    12 offset   D
+        966       3    14 eOffset   D
+        973     183    14 eOffset   D
+         59    1180    16  beat   D
+         64    1175    18 duration   D
+        987     169    20 velocity   I
+        708       3    21 pitch   I
+        715       3    21 pitch   I
+        721       3    21 pitch   I
+        727       3    21 pitch   I
+        733       3    21 pitch   I
+        739       3    21 pitch   I
+        746       3    21 pitch   I
+        775     381    21 pitch   I
+        904     252    22 octave   I
+         35    1214    23 lineCount   I
+         49    1200    24     s   Lat/ofai/music/util/Matcher;
+        260     204    25  isBt   Z
+        286      29    26     e   Ljava/lang/NumberFormatException;
+        382      29    26     e   Ljava/lang/NumberFormatException;
+        651     505    25  note   Ljava/lang/String;
+        789     367    26   mod   Ljava/lang/String;
+        792      98    27     i   I
+       1097      59    27     m   I
+       1147       6    28     e   Lat/ofai/music/util/Event;
+
+  public static void main(java.lang.String[]) throws java.lang.Exception;
+    Code:
+       0: aload_0
+       1: iconst_0
+       2: aaload
+       3: invokestatic  #436                // Method readLabelFile:(Ljava/lang/String;)Lat/ofai/music/util/EventList;
+       6: invokevirtual #785                // Method print:()V
+       9: iconst_0
+      10: invokestatic  #787                // Method java/lang/System.exit:(I)V
+      13: aload_0
+      14: iconst_0
+      15: aaload
+      16: invokestatic  #791                // Method readMatchFile:(Ljava/lang/String;)Lat/ofai/music/util/EventList;
+      19: astore_1
+      20: new           #793                // class at/ofai/music/worm/WormFile
+      23: dup
+      24: aconst_null
+      25: aload_1
+      26: invokespecial #795                // Method at/ofai/music/worm/WormFile."<init>":(Lat/ofai/music/worm/Worm;Lat/ofai/music/util/EventList;)V
+      29: astore_2
+      30: aload_0
+      31: arraylength
+      32: iconst_2
+      33: if_icmplt     54
+      36: aload_0
+      37: iconst_1
+      38: aaload
+      39: invokestatic  #453                // Method java/lang/Double.parseDouble:(Ljava/lang/String;)D
+      42: dstore_3
+      43: aload_2
+      44: iconst_3
+      45: dload_3
+      46: dload_3
+      47: iconst_0
+      48: invokevirtual #798                // Method at/ofai/music/worm/WormFile.smooth:(IDDI)V
+      51: goto          62
+      54: aload_2
+      55: iconst_0
+      56: dconst_0
+      57: dconst_0
+      58: iconst_0
+      59: invokevirtual #798                // Method at/ofai/music/worm/WormFile.smooth:(IDDI)V
+      62: aload_2
+      63: ldc_w         #802                // String worm.out
+      66: invokevirtual #804                // Method at/ofai/music/worm/WormFile.write:(Ljava/lang/String;)V
+      69: aload_0
+      70: arraylength
+      71: iconst_3
+      72: if_icmpne     79
+      75: aload_1
+      76: invokevirtual #785                // Method print:()V
+      79: return
+    LineNumberTable:
+      line 813: 0
+      line 814: 9
+      line 815: 13
+      line 816: 20
+      line 817: 30
+      line 818: 36
+      line 819: 43
+      line 821: 54
+      line 822: 62
+      line 823: 69
+      line 824: 75
+      line 825: 79
+    LocalVariableTable:
+      Start  Length  Slot  Name   Signature
+          0      80     0  args   [Ljava/lang/String;
+         20      60     1    el   Lat/ofai/music/util/EventList;
+         30      50     2    wf   Lat/ofai/music/worm/WormFile;
+         43      11     3    sm   D
+}
