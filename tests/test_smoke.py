@@ -11,6 +11,7 @@ MODULES = [
     "scripts.models",
     "scripts.offline_dtw",
     "scripts.oltw",
+    "scripts.basic_online",
     "scripts.online_baselines",
     "scripts.kalman_online",
     "scripts.evaluation",

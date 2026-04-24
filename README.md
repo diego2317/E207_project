@@ -1,6 +1,7 @@
 # E207 Project
 
-Milestone 1 implementation for the Real-Time Alignment & Tracking project.
+Milestone 1 benchmark pipeline plus the reset-stage Milestone 2 baselines for
+causal alignment in the Real-Time Alignment & Tracking project.
 
 ## Layout
 
@@ -72,19 +73,24 @@ python -m ipykernel install --user --name e207-bench --display-name "Python 3.10
 ## Benchmark Entry Points
 
 - `scripts.evaluation.evaluate_recording_pair(pair, method_name=...)` runs one alignment method on one benchmark case and computes beat-based query-to-reference tracking metrics.
-- `scripts.evaluation.run_alignment_benchmark(...)` discovers recordings, builds directed same-piece benchmark cases, selects a run mode, and writes metrics summaries to `outputs/metrics/`.
+- `scripts.evaluation.run_alignment_benchmark(...)` discovers recordings, builds directed same-piece benchmark cases, selects a run mode, and writes pair, piece, phase, and tolerance summaries to `outputs/metrics/`.
 - `scripts.evaluation.run_offline_benchmark(...)` remains as a compatibility wrapper for the offline DTW baseline.
 - `python -m scripts.run_benchmark --method offline_dtw --mode single --pair-id <reference__query>` runs one directed benchmark case.
 - `python -m scripts.run_benchmark --method offline_dtw --mode small` runs the fixed 3-recording preview benchmark (6 directed cases from the shortest eligible piece).
+- `python -m scripts.run_benchmark --method offline_dtw --mode development` runs the balanced 3-piece, 4-recording-per-piece development benchmark (36 directed cases when all pieces are eligible).
 - `python -m scripts.run_benchmark --method offline_dtw --mode full` runs the full directed benchmark set.
 - `python -m scripts.run_benchmark --method offline_dtw --mode paper_test --max-pairs 1000` runs the held-out `paper_test` subset but stops after the first 1000 selected directed cases.
 - `python -m scripts.run_benchmark --method oltw --mode small` runs the default `PerformanceMatcher.jar`-backed OLTW baseline.
+- `python -m scripts.run_benchmark --method naive_online_dtw --mode development` runs the reset causal-alignment baseline: full-width streaming normalized online DTW with no tracker.
+- `python -m scripts.run_benchmark --method basic_kalman_online_dtw --mode development` runs the same causal online-DTW measurement stream with a plain constant-velocity Kalman filter on top.
 - `python -m scripts.run_benchmark --method kalman_oltw --mode small` runs the current native Kalman-guided streaming normalized online-DTW baseline.
 - Benchmark selection now excludes pairs with average warp factor above `2.0` by default to match the paper-style constraint. Override with `--exclude-warp-factor-above`.
 - `--max-pairs` is only supported with `--mode paper_test`.
-- `scripts.online_baselines.register_online_baseline("oltw", runner)` and `register_online_baseline("oltw_global", runner)` override the default Java-backed hooks with external implementations when needed.
+- `scripts.online_baselines.register_online_baseline("oltw", runner)`, `register_online_baseline("oltw_global", runner)`, `register_online_baseline("naive_online_dtw", runner)`, and `register_online_baseline("basic_kalman_online_dtw", runner)` override the default online hooks when needed.
 - `oltw` and `oltw_global` both default to invoking `PerformanceMatcher.jar`; any future `OnlineAlignment` integration should be registered explicitly through `scripts.online_baselines`.
+- `naive_online_dtw` and `basic_kalman_online_dtw` are the active reset baselines for Milestone 2 problem understanding: causal alignment first, advanced search/coupling later.
 - `kalman_oltw` is now a native Python baseline with explicit future-work scaffolding for search policy, transition-set, tracker, and coupling experiments. The current implementation still uses a constant-velocity Kalman filter, but the repo now treats that as the control model for structured iteration rather than the presumed final answer.
+- `docs/milestone2_reset.md` records the reset framing around causal alignment for accompaniment and the balanced development benchmark design.
 - `scripts.kalman_online.list_kalman_oltw_presets()` exposes the current baseline preset plus the planned experiment presets that future implementations should compare against in a controlled way.
 - `docs/milestone2_iteration_plan.md` records the planned experiment matrix, diagnostics, and tracker decision criteria for the next Milestone 2 iteration cycle.
 - `scripts.visualization.plot_alignment_path(...)` and `scripts.visualization.plot_error_summary(...)` generate diagnostic plots for inspection.

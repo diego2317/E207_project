@@ -99,14 +99,52 @@ def run_kalman_oltw(
     return kalman_online.run_kalman_oltw(reference_features, query_features, **runner_kwargs)
 
 
+def run_naive_online_dtw(
+    reference_features: FeatureSequence,
+    query_features: FeatureSequence,
+    **runner_kwargs: object,
+) -> AlignmentResult:
+    """Run the reset baseline: naive full-width causal online DTW."""
+
+    runner = _REGISTERED_BASELINES.get("naive_online_dtw")
+    if runner is not None:
+        return runner(reference_features, query_features, **runner_kwargs)
+
+    from scripts import basic_online
+
+    return basic_online.run_naive_online_dtw(reference_features, query_features, **runner_kwargs)
+
+
+def run_basic_kalman_online_dtw(
+    reference_features: FeatureSequence,
+    query_features: FeatureSequence,
+    **runner_kwargs: object,
+) -> AlignmentResult:
+    """Run the reset baseline with a plain constant-velocity Kalman filter."""
+
+    runner = _REGISTERED_BASELINES.get("basic_kalman_online_dtw")
+    if runner is not None:
+        return runner(reference_features, query_features, **runner_kwargs)
+
+    from scripts import basic_online
+
+    return basic_online.run_basic_kalman_online_dtw(
+        reference_features,
+        query_features,
+        **runner_kwargs,
+    )
+
+
 def get_adapter_notes() -> dict[str, str]:
     """Describe the common interface expected from online baseline adapters."""
 
     return {
         "input": "FeatureSequence for reference and query.",
         "output": "AlignmentResult with monotonic time mapping and method metadata.",
-        "registration": "Call register_online_baseline('oltw', runner), register_online_baseline('oltw_global', runner), or register_online_baseline('kalman_oltw', runner) to override the defaults.",
+        "registration": "Call register_online_baseline('oltw', runner), register_online_baseline('oltw_global', runner), register_online_baseline('kalman_oltw', runner), register_online_baseline('naive_online_dtw', runner), or register_online_baseline('basic_kalman_online_dtw', runner) to override the defaults.",
         "default_oltw": "The built-in `oltw` and `oltw_global` methods call PerformanceMatcher.jar by default.",
+        "default_naive_online_dtw": "The built-in `naive_online_dtw` method runs the reset full-width causal normalized-DTW baseline anchored at the reference origin.",
+        "default_basic_kalman_online_dtw": "The built-in `basic_kalman_online_dtw` method filters the naive measurement track with a plain constant-velocity Kalman filter.",
         "default_kalman_oltw": "The built-in `kalman_oltw` method runs the native Python streaming normalized DTW baseline and now exposes preset and diagnostics scaffolding for future search, transition, and tracker experiments.",
         "audio_paths": "The Java-backed baselines consume audio paths from FeatureSequence.metadata['audio_path']; `kalman_oltw` uses feature values directly.",
     }

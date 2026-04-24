@@ -26,11 +26,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--mode",
-        choices=("single", "small", "full", "all_pairs", "paper_test"),
+        choices=("single", "small", "development", "full", "all_pairs", "paper_test"),
         default="all_pairs",
         help=(
             "Select one directed benchmark case, a fixed 3-recording preview set, "
-            "all directed pairs, or the paper-style held-out test subset."
+            "a balanced multi-piece development slice, all directed pairs, "
+            "or the paper-style held-out test subset."
         ),
     )
     parser.add_argument(
@@ -187,6 +188,8 @@ def _default_experiment_name(
         return f"{method_name}{preset_suffix}_single_{pair_id}"
     if mode == "small":
         return f"{method_name}{preset_suffix}_small"
+    if mode == "development":
+        return f"{method_name}{preset_suffix}_development"
     if mode in {"full", "all_pairs"}:
         return f"{method_name}{preset_suffix}_all_pairs"
     if mode == "paper_test":

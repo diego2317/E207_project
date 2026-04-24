@@ -20,18 +20,28 @@ AlignmentRunner = Callable[..., AlignmentResult]
 BenchmarkSelectionMode = Literal[
     "single",
     "small",
+    "development",
     "full",
     "all_pairs",
     "paper_test",
 ]
 SMALL_BENCHMARK_RECORDING_COUNT = 3
+DEVELOPMENT_BENCHMARK_PIECE_COUNT = 3
+DEVELOPMENT_BENCHMARK_RECORDING_COUNT = 4
 DEFAULT_METHOD_NAME = "offline_dtw"
 DEFAULT_DEVELOPMENT_PIECE = "Chopin_Op030No2"
+DEFAULT_DEVELOPMENT_BENCHMARK_PIECES = (
+    "Chopin_Op017No4",
+    "Chopin_Op024No2",
+    "Chopin_Op030No2",
+)
 DEFAULT_MAX_WARP_FACTOR = 2.0
 _ALIGNMENT_RUNNERS: dict[str, AlignmentRunner] = {
     DEFAULT_METHOD_NAME: offline_dtw.run_offline_dtw,
     "oltw": online_baselines.run_oltw,
     "oltw_global": online_baselines.run_oltw_global,
+    "naive_online_dtw": online_baselines.run_naive_online_dtw,
+    "basic_kalman_online_dtw": online_baselines.run_basic_kalman_online_dtw,
     "kalman_oltw": online_baselines.run_kalman_oltw,
 }
 
@@ -214,6 +224,11 @@ def select_recording_pairs(
     ordered_pairs = sorted(pairs, key=lambda item: (item.piece, item.pair_id))
     if selection_mode in {"full", "all_pairs"}:
         selected_pairs = ordered_pairs
+    elif selection_mode == "development":
+        selected_pairs = _select_development_benchmark_pairs(
+            ordered_pairs,
+            max_warp_factor=max_warp_factor,
+        )
     elif selection_mode == "paper_test":
         selected_pairs = _select_paper_test_benchmark_pairs(
             ordered_pairs,
@@ -357,11 +372,15 @@ def save_benchmark_outputs(
 
     pair_metrics_path = destination / f"{experiment_name}_pairs.csv"
     summary_path = destination / f"{experiment_name}_summary.csv"
+    piece_summary_path = destination / f"{experiment_name}_piece_summary.csv"
+    phase_summary_path = destination / f"{experiment_name}_phase_summary.csv"
     beat_errors_path = destination / f"{experiment_name}_beat_errors.csv"
     tolerance_curve_path = destination / f"{experiment_name}_tolerance_curve.csv"
 
     metrics_frame.to_csv(pair_metrics_path, index=False)
     metrics.summarize_metrics(metrics_frame).to_csv(summary_path, index=False)
+    metrics.summarize_metrics_by_piece(metrics_frame).to_csv(piece_summary_path, index=False)
+    metrics.summarize_error_by_track_phase(error_rows).to_csv(phase_summary_path, index=False)
     error_rows.to_csv(beat_errors_path, index=False)
     metrics.compute_tolerance_curve(
         error_rows,
@@ -401,6 +420,54 @@ def _select_small_benchmark_pairs(pairs: list[RecordingPair]) -> list[RecordingP
     return sorted(selected_pairs, key=_pair_duration_key)
 
 
+def _select_development_benchmark_pairs(
+    pairs: list[RecordingPair],
+    max_warp_factor: float | None,
+) -> list[RecordingPair]:
+    piece_recordings = _collect_recordings_by_piece(pairs)
+    eligible_piece_windows: dict[str, list[Recording]] = {}
+    for piece, recordings in piece_recordings.items():
+        chosen = _select_balanced_recording_window(
+            recordings,
+            target_count=DEVELOPMENT_BENCHMARK_RECORDING_COUNT,
+            max_warp_factor=max_warp_factor,
+        )
+        if chosen:
+            eligible_piece_windows[piece] = chosen
+
+    preferred_order = [
+        piece
+        for piece in DEFAULT_DEVELOPMENT_BENCHMARK_PIECES
+        if piece in eligible_piece_windows
+    ]
+    remaining_pieces = sorted(
+        piece for piece in eligible_piece_windows if piece not in preferred_order
+    )
+    chosen_pieces = (preferred_order + remaining_pieces)[:DEVELOPMENT_BENCHMARK_PIECE_COUNT]
+    if len(chosen_pieces) < DEVELOPMENT_BENCHMARK_PIECE_COUNT:
+        raise ValueError(
+            "Development benchmark mode requires at least three pieces with four "
+            "annotated recordings inside the warp-factor constraint."
+        )
+
+    selected_recording_ids = {
+        piece: {recording.recording_id for recording in eligible_piece_windows[piece]}
+        for piece in chosen_pieces
+    }
+    piece_rank = {piece: rank for rank, piece in enumerate(chosen_pieces)}
+    selected_pairs = [
+        pair
+        for pair in pairs
+        if pair.piece in selected_recording_ids
+        and pair.reference.recording_id in selected_recording_ids[pair.piece]
+        and pair.query.recording_id in selected_recording_ids[pair.piece]
+    ]
+    return sorted(
+        selected_pairs,
+        key=lambda pair: (piece_rank[pair.piece], _pair_duration_key(pair)),
+    )
+
+
 def _select_paper_test_benchmark_pairs(
     pairs: list[RecordingPair],
     development_piece: str,
@@ -418,6 +485,37 @@ def _collect_recordings_by_piece(pairs: list[RecordingPair]) -> dict[str, list[R
         piece: [recordings[recording_id] for recording_id in sorted(recordings)]
         for piece, recordings in grouped.items()
     }
+
+
+def _select_balanced_recording_window(
+    recordings: list[Recording],
+    target_count: int,
+    max_warp_factor: float | None,
+) -> list[Recording]:
+    ordered = sorted(recordings, key=_recording_duration_key)
+    if len(ordered) < target_count:
+        return []
+
+    best_window: list[Recording] | None = None
+    best_key: tuple[float, float, tuple[str, ...]] | None = None
+    for start_index in range(0, len(ordered) - target_count + 1):
+        window = ordered[start_index : start_index + target_count]
+        shortest = _recording_duration_seconds(window[0])
+        longest = _recording_duration_seconds(window[-1])
+        if shortest <= 0:
+            continue
+        warp_factor = longest / shortest
+        if max_warp_factor is not None and warp_factor > max_warp_factor:
+            continue
+        spread = longest - shortest
+        mean_duration = sum(_recording_duration_seconds(recording) for recording in window) / target_count
+        window_ids = tuple(recording.recording_id for recording in window)
+        ranking_key = (spread, -mean_duration, window_ids)
+        if best_key is None or ranking_key > best_key:
+            best_window = window
+            best_key = ranking_key
+
+    return best_window or []
 
 
 def _runner_uses_audio_paths(runner: AlignmentRunner) -> bool:

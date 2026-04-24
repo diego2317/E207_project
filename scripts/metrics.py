@@ -145,6 +145,63 @@ def summarize_metrics(metric_rows: pd.DataFrame | list[dict[str, object]]) -> pd
     return frame.groupby("method_name", dropna=False).agg(**aggregation_spec).reset_index()
 
 
+def summarize_metrics_by_piece(
+    metric_rows: pd.DataFrame | list[dict[str, object]],
+) -> pd.DataFrame:
+    """Aggregate per-pair metrics by method and piece."""
+
+    frame = metric_rows if isinstance(metric_rows, pd.DataFrame) else pd.DataFrame(metric_rows)
+    if frame.empty:
+        return pd.DataFrame()
+
+    return (
+        frame.groupby(["method_name", "piece"], dropna=False)
+        .agg(
+            num_pairs=("pair_id", "size"),
+            mean_mae_s=("mean_abs_error_s", "mean"),
+            median_mae_s=("mean_abs_error_s", "median"),
+            mean_rmse_s=("rmse_s", "mean"),
+            mean_p95_abs_error_s=("p95_abs_error_s", "mean"),
+            mean_within_100ms=("within_100ms", "mean"),
+            mean_within_200ms=("within_200ms", "mean"),
+        )
+        .reset_index()
+    )
+
+
+def summarize_error_by_track_phase(
+    error_rows: pd.DataFrame | list[dict[str, object]],
+) -> pd.DataFrame:
+    """Aggregate beat errors for the first and second halves of each pair."""
+
+    frame = error_rows if isinstance(error_rows, pd.DataFrame) else pd.DataFrame(error_rows)
+    if frame.empty:
+        return pd.DataFrame()
+
+    working = frame.copy()
+    pair_lengths = working.groupby("pair_id", dropna=False)["beat_index"].transform("max") + 1
+    normalized_position = (working["beat_index"].to_numpy(dtype=np.float64) + 0.5) / pair_lengths.to_numpy(
+        dtype=np.float64
+    )
+    working["track_phase"] = np.where(normalized_position <= 0.5, "early", "late")
+    working["sq_error_s"] = working["error_s"].to_numpy(dtype=np.float64) ** 2
+    working["within_100ms"] = working["abs_error_s"].to_numpy(dtype=np.float64) <= 0.1
+    working["within_200ms"] = working["abs_error_s"].to_numpy(dtype=np.float64) <= 0.2
+
+    summary = (
+        working.groupby(["method_name", "track_phase"], dropna=False)
+        .agg(
+            num_predictions=("beat_index", "size"),
+            mean_abs_error_s=("abs_error_s", "mean"),
+            rmse_s=("sq_error_s", lambda values: float(np.sqrt(np.mean(values)))),
+            within_100ms=("within_100ms", "mean"),
+            within_200ms=("within_200ms", "mean"),
+        )
+        .reset_index()
+    )
+    return summary.sort_values(["method_name", "track_phase"]).reset_index(drop=True)
+
+
 def build_tolerance_grid(
     max_tolerance_s: float = DEFAULT_MAX_TOLERANCE_S,
     step_s: float = DEFAULT_TOLERANCE_STEP_S,

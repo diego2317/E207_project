@@ -13,6 +13,7 @@ import soundfile as sf
 
 from scripts import (
     aggregate_benchmark,
+    basic_online,
     data_io,
     evaluation,
     features,
@@ -521,6 +522,8 @@ def test_end_to_end_offline_benchmark_writes_outputs(tmp_path: Path) -> None:
     assert (metrics_frame["mean_abs_error_s"] < 0.05).all()
     assert (output_dir / "synthetic_benchmark_pairs.csv").exists()
     assert (output_dir / "synthetic_benchmark_summary.csv").exists()
+    assert (output_dir / "synthetic_benchmark_piece_summary.csv").exists()
+    assert (output_dir / "synthetic_benchmark_phase_summary.csv").exists()
     assert (output_dir / "synthetic_benchmark_beat_errors.csv").exists()
     assert (output_dir / "synthetic_benchmark_tolerance_curve.csv").exists()
 
@@ -554,6 +557,66 @@ def test_run_alignment_benchmark_supports_performance_matcher_oltw(
     assert len(metrics_frame) == 2
     assert set(metrics_frame["method_name"]) == {"oltw"}
     assert (metrics_frame["mean_abs_error_s"] < 0.05).all()
+
+
+def test_naive_online_runner_records_reset_metadata() -> None:
+    reference = FeatureSequence(
+        values=np.eye(6, dtype=np.float64),
+        frame_times=np.arange(6, dtype=np.float64) * 0.5,
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+        metadata={"recording_id": "reference"},
+    )
+    query = FeatureSequence(
+        values=np.eye(6, dtype=np.float64),
+        frame_times=np.arange(6, dtype=np.float64) * 0.5,
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+        metadata={"recording_id": "query"},
+    )
+
+    result = basic_online.run_naive_online_dtw(reference, query)
+
+    assert result.method_name == "naive_online_dtw"
+    assert result.metadata["backend"] == "python_full_width_causal_dtw"
+    assert result.metadata["tracker_model"] == "none"
+    assert result.metadata["reset_baseline"] is True
+    assert result.metadata["search_policy_name"] == "full_width_causal"
+    assert result.metadata["start_at_reference_origin"] is True
+    assert result.metadata["step_pattern_name"] == "default_normalized_v1"
+    np.testing.assert_array_equal(result.path[:, 1], np.arange(6, dtype=np.int64))
+    assert np.all(np.diff(result.path[:, 0]) >= 0)
+
+
+def test_basic_kalman_online_runner_records_reset_metadata() -> None:
+    reference = FeatureSequence(
+        values=np.eye(6, dtype=np.float64),
+        frame_times=np.arange(6, dtype=np.float64) * 0.5,
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+        metadata={"recording_id": "reference"},
+    )
+    query = FeatureSequence(
+        values=np.eye(6, dtype=np.float64),
+        frame_times=np.arange(6, dtype=np.float64) * 0.5,
+        sample_rate=1,
+        hop_length=1,
+        feature_name="toy",
+        metadata={"recording_id": "query"},
+    )
+
+    result = basic_online.run_basic_kalman_online_dtw(reference, query)
+
+    assert result.method_name == "basic_kalman_online_dtw"
+    assert result.metadata["backend"] == "python_full_width_causal_dtw"
+    assert result.metadata["tracker_model"] == "basic_constant_velocity"
+    assert result.metadata["reset_baseline"] is True
+    assert result.metadata["kalman_measurement_variance"] == pytest.approx(9.0)
+    np.testing.assert_array_equal(result.path[:, 1], np.arange(6, dtype=np.int64))
+    assert np.all(np.diff(result.path[:, 0]) >= 0)
 
 
 def test_kalman_online_streaming_measurements_follow_identity_path() -> None:
@@ -845,6 +908,43 @@ def test_run_alignment_benchmark_supports_kalman_oltw(
     assert (metrics_frame["mean_abs_error_s"] < 0.05).all()
 
 
+def test_run_alignment_benchmark_supports_naive_online_dtw(
+    tmp_path: Path,
+) -> None:
+    dataset_root = _build_synthetic_dataset(tmp_path)
+
+    metrics_frame = evaluation.run_alignment_benchmark(
+        dataset_root=dataset_root,
+        method_name="naive_online_dtw",
+        save_outputs=False,
+        show_progress=False,
+    )
+
+    assert len(metrics_frame) == 2
+    assert set(metrics_frame["method_name"]) == {"naive_online_dtw"}
+    assert set(metrics_frame["tracker_model"]) == {"none"}
+    assert set(metrics_frame["search_policy_name"]) == {"full_width_causal"}
+    assert (metrics_frame["mean_abs_error_s"] < 0.05).all()
+
+
+def test_run_alignment_benchmark_supports_basic_kalman_online_dtw(
+    tmp_path: Path,
+) -> None:
+    dataset_root = _build_synthetic_dataset(tmp_path)
+
+    metrics_frame = evaluation.run_alignment_benchmark(
+        dataset_root=dataset_root,
+        method_name="basic_kalman_online_dtw",
+        save_outputs=False,
+        show_progress=False,
+    )
+
+    assert len(metrics_frame) == 2
+    assert set(metrics_frame["method_name"]) == {"basic_kalman_online_dtw"}
+    assert set(metrics_frame["tracker_model"]) == {"basic_constant_velocity"}
+    assert (metrics_frame["mean_abs_error_s"] < 0.05).all()
+
+
 def test_run_alignment_benchmark_supports_kalman_oltw_preset_metadata(
     tmp_path: Path,
 ) -> None:
@@ -1006,6 +1106,30 @@ def test_select_recording_pairs_supports_single_small_all_pairs_and_paper_test(
         evaluation.select_recording_pairs(pairs, selection_mode="single")
 
 
+def test_select_recording_pairs_supports_development_mode(tmp_path: Path) -> None:
+    dataset_root = _build_split_layout_dataset(
+        tmp_path,
+        piece_specs={
+            "Chopin_Op017No4": [0.7, 0.8, 0.9, 1.0],
+            "Chopin_Op024No2": [0.75, 0.85, 0.95, 1.05],
+            "Chopin_Op030No2": [0.8, 0.9, 1.0, 1.1],
+        },
+    )
+    pairs = data_io.build_recording_pairs(data_io.discover_recordings(dataset_root))
+
+    development_pairs = evaluation.select_recording_pairs(
+        pairs,
+        selection_mode="development",
+    )
+
+    assert len(development_pairs) == 36
+    assert Counter(pair.piece for pair in development_pairs) == {
+        "Chopin_Op017No4": 12,
+        "Chopin_Op024No2": 12,
+        "Chopin_Op030No2": 12,
+    }
+
+
 def test_select_recording_pairs_can_filter_large_warp_factors(tmp_path: Path) -> None:
     dataset_root = _build_split_layout_dataset(
         tmp_path,
@@ -1147,6 +1271,31 @@ def test_run_offline_benchmark_supports_selection_modes(tmp_path: Path) -> None:
     assert len(limited_paper_frame) == 5
 
 
+def test_run_offline_benchmark_supports_development_mode(tmp_path: Path) -> None:
+    dataset_root = _build_split_layout_dataset(
+        tmp_path,
+        piece_specs={
+            "Chopin_Op017No4": [0.7, 0.8, 0.9, 1.0],
+            "Chopin_Op024No2": [0.75, 0.85, 0.95, 1.05],
+            "Chopin_Op030No2": [0.8, 0.9, 1.0, 1.1],
+        },
+    )
+
+    development_frame = evaluation.run_offline_benchmark(
+        dataset_root=dataset_root,
+        selection_mode="development",
+        save_outputs=False,
+        show_progress=False,
+    )
+
+    assert len(development_frame) == 36
+    assert set(development_frame["piece"]) == {
+        "Chopin_Op017No4",
+        "Chopin_Op024No2",
+        "Chopin_Op030No2",
+    }
+
+
 def test_select_preview_recording_pair_returns_fastest_small_case(tmp_path: Path) -> None:
     dataset_root = _build_split_layout_dataset(
         tmp_path,
@@ -1225,6 +1374,16 @@ def test_run_benchmark_cli_rejects_max_pairs_outside_paper_test(tmp_path: Path) 
                 "--no-save",
             ]
         )
+
+
+def test_run_benchmark_default_name_supports_development_mode() -> None:
+    experiment_name = run_benchmark._default_experiment_name(
+        method_name="naive_online_dtw",
+        mode="development",
+        pair_id=None,
+    )
+
+    assert experiment_name == "naive_online_dtw_development"
 
 
 def test_visualization_helpers_render(tmp_path: Path) -> None:
